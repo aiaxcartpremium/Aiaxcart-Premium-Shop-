@@ -38,21 +38,38 @@ function bindAuth(){
   const email = el('loginEmail');
   const pass  = el('loginPass');
   const msg   = el('authMsg');
+  const form  = document.getElementById('signinForm');
 
-  el('loginBtn').onclick = async ()=>{
+  async function doSignIn() {
     msg.textContent = '';
-    const { error } = await supabase.auth.signInWithPassword({ email: email.value.trim(), password: pass.value });
-    if(error){ msg.textContent = error.message; return; }
-    location.reload();
-  };
+    const { error } = await supabase.auth.signInWithPassword({
+      email: email.value.trim(),
+      password: pass.value
+    });
+    if (error) { msg.textContent = error.message; return; }
+    location.reload();             // proceed to init() as logged-in user
+  }
 
-  el('signupBtn').onclick = async ()=>{
+  async function doSignUp() {
     msg.textContent = '';
-    const { error } = await supabase.auth.signUp({ email: email.value.trim(), password: pass.value });
-    if(error){ msg.textContent = error.message; return; }
-    msg.textContent = 'Account created. Please sign in.';
-  };
+    const { error } = await supabase.auth.signUp({
+      email: email.value.trim(),
+      password: pass.value
+    });
+    if (error) { msg.textContent = error.message; return; }
+    msg.textContent = 'Check your email to confirm, then sign in.';
+  }
+
+  // ✅ Submit (Enter key) and button both call the same sign-in logic
+  form?.addEventListener('submit', (e) => {
+    e.preventDefault();
+    doSignIn();
+  });
+
+  el('loginBtn').onclick  = (e) => { e.preventDefault(); doSignIn(); };
+  el('signupBtn').onclick = (e) => { e.preventDefault(); doSignUp();  };
 }
+
 
 // PRODUCTS + CHECKOUT -----------------------------------------
 async function loadProducts(){
