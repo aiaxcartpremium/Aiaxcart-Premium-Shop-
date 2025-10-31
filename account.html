@@ -27,14 +27,21 @@
 </head>
 <body>
 
-<header>
+<header class="row" style="align-items:center">
   <a href="index.html" class="btn ghost">← Back to Store</a>
-  <h1 style="margin:0">My Account</h1>
-  <div class="right">
+  <h1 style="margin:0; flex:1; text-align:center">My Account</h1>
+  <div class="row" style="gap:12px">
     <a href="feedback.html" class="btn">Feedback</a>
-    <button id="logoutBtn" class="btn ghost" style="display:none">Logout</button>
+    <button id="logoutBtn" class="btn ghost">Logout</button>
   </div>
 </header>
+
+<main class="container">
+  <div id="ordersBox"></div>
+</main>
+
+<script type="module" src="account.js"></script>
+
 
 <main class="container" style="padding:12px 20px; max-width:980px; margin:auto">
 
