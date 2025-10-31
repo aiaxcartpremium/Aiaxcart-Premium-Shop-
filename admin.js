@@ -1,3 +1,4 @@
+console.log('Admin.js loaded');
 // admin.js - full updated admin panel client logic
 import { supabase } from './app.js';
 
