@@ -87,21 +87,19 @@
 
   <!-- we use a real form to capture Enter key and prevent page reload -->
   <form id="signinForm" class="form-row" autocomplete="on">
-    <div class="field">
-      <label for="loginEmail">Email</label>
-      <input id="loginEmail" type="email" placeholder="you@email.com" required>
-    </div>
-
-    <div class="field">
-      <label for="loginPass">Password</label>
-      <input id="loginPass" type="password" placeholder="••••••••" required>
-    </div>
-
-    <div class="auth-actions">
-      <button type="submit" class="btn primary" id="loginBtn">Sign in</button>
-      <button type="button" class="btn" id="signupBtn">Create account</button>
-    </div>
-  </form>
+  <div class="field">
+    <label for="loginEmail">Email</label>
+    <input id="loginEmail" type="email" required>
+  </div>
+  <div class="field">
+    <label for="loginPass">Password</label>
+    <input id="loginPass" type="password" required>
+  </div>
+  <div class="auth-actions">
+    <button id="loginBtn"  type="submit" class="btn primary">Sign in</button>
+    <button id="signupBtn" type="button" class="btn">Create account</button>
+  </div>
+</form>
 
   <p class="muted" id="authMsg"></p>
 </div>
