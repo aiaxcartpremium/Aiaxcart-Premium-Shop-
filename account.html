@@ -40,11 +40,28 @@
 <body>
   <div class="wrap">
     <header>
-      <a href="index.html" class="btn ghost">← Back to Store</a>
-      <h1>My Account</h1>
-      <div style="flex:1"></div>
-      <a href="feedback.html" class="btn">Feedback</a>
-      <button id="logoutBtn" class="btn ghost">Logout</button>
+      <style>
+  .hidden { display:none; }
+</style>
+…
+<div id="authGate" class="card"><!-- DEFAULT: visible -->
+  … (login/signup fields here) …
+</div>
+
+<div id="app" class="hidden"><!-- DEFAULT: hidden -->
+  … (orders + checkout grid here) …
+</div>
+
+<noscript>
+  <div class="card warn" style="margin-top:12px">
+    This page needs JavaScript. Please enable JavaScript to sign in.
+  </div>
+</noscript>
+
+<!-- scripts at very end, in this order -->
+<script src="app.js?v=2"></script>
+<script src="account.js?v=2"></script>
+
     </header>
 
     <div id="authGate" class="card" style="display:none;">
