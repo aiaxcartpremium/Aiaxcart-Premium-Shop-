@@ -1,212 +1,164 @@
-/* global supabase, $id, $on */
+/* global supabase */
 
-// CONFIG you can change
-const SHARED_FACTOR = 0.60;  // shared price multiplier
-const GCASH_NUMBER  = '09XX-XXX-XXXX';
-const MAYA_NUMBER   = '09YY-YYY-YYYY';
+// shop.js = homepage controller (auth state, tabs, product list)
 
-let products = [];           // [{id,name,category,price,available}]
-let currentProd = null;      // product for checkout
+// ---------- UI refs ----------
+const openAuthBtn   = document.getElementById('openAuth');
+const myAccLink     = document.getElementById('myAccountLink');
+const adminLink     = document.getElementById('adminLink');
+const authModal     = document.getElementById('authModal');
+const closeAuthBtn  = document.getElementById('closeAuth');
+const emailInput    = document.getElementById('authEmail');
+const passInput     = document.getElementById('authPass');
+const loginBtn      = document.getElementById('doLogin');
+const signupBtn     = document.getElementById('doSignup');
+const authMsg       = document.getElementById('authMsg');
 
-document.addEventListener('DOMContentLoaded', initStore);
+const tabsBar       = document.getElementById('tabs');
+const productsGrid  = document.getElementById('productsGrid');
 
-async function initStore(){
-  // set collector numbers
-  $id('gcashNum').textContent = GCASH_NUMBER;
-  $id('mayaNum').textContent  = MAYA_NUMBER;
+// ---------- state ----------
+let session = null;
+let products = [];
 
-  // toggle PM info
-  document.querySelectorAll('input[name="pm"]').forEach(r=>{
-    r.addEventListener('change', ()=>{
-      const pm = getPM();
-      $id('gcashInfo').classList.toggle('hidden', pm!=='gcash');
-      $id('mayaInfo').classList.toggle('hidden', pm!=='maya');
-    });
+// ---------- boot ----------
+init();
+
+async function init() {
+  guardSupabase();
+
+  // tab behaviour
+  tabsBar?.addEventListener('click', onTabClick);
+
+  // open/close auth
+  openAuthBtn?.addEventListener('click', () => authModal.showModal());
+  closeAuthBtn?.addEventListener('click', () => authModal.close());
+
+  // auth actions
+  loginBtn?.addEventListener('click', signIn);
+  signupBtn?.addEventListener('click', signUp);
+
+  // initial auth state
+  const { data } = await supabase.auth.getSession();
+  session = data.session || null;
+  toggleAuthUI(!!session);
+
+  // reactive auth state
+  supabase.auth.onAuthStateChange((_event, sess) => {
+    session = sess;
+    toggleAuthUI(!!session);
   });
-
-  // modal buttons
-  $on($id('ckClose'), 'click', ()=>$id('ckModal').style.display='none');
-
-  // amount recompute on changes
-  ;['ownSel','credSel','durSel'].forEach(id=>{
-    $on($id(id),'change', updateAmount);
-  });
-
-  $on($id('placeBtn'),'click', placeOrder);
 
   // load products
   await loadProducts();
-  renderByCategory();
+}
 
-  // click handlers (order buttons)
-  document.addEventListener('click', (e)=>{
-    const b = e.target.closest('.orderBtn');
-    if(!b) return;
-    e.preventDefault();
-    const id = b.dataset.id;
-    const prod = products.find(p=>p.id===id);
-    openCheckout(prod);
+// ---------- helpers ----------
+function guardSupabase() {
+  if (!window.supabase || !supabase.auth) {
+    console.error('Supabase client missing. Ensure app.js creates the client BEFORE shop.js.');
+  }
+}
+
+function toggleAuthUI(isLoggedIn) {
+  if (isLoggedIn) {
+    openAuthBtn.style.display = 'none';
+    myAccLink.style.display = '';
+  } else {
+    openAuthBtn.style.display = '';
+    myAccLink.style.display = 'none';
+  }
+}
+
+// Tabs switching
+function onTabClick(e) {
+  const a = e.target.closest('a.tab');
+  if (!a) return;
+  e.preventDefault();
+
+  // activate tab
+  [...tabsBar.querySelectorAll('.tab')].forEach(t => t.classList.remove('active'));
+  a.classList.add('active');
+
+  const key = a.dataset.tab;
+  // show panel
+  ['accounts','payments','rules','feedback','about'].forEach(k => {
+    const pn = document.getElementById(`tab-${k}`);
+    if (pn) pn.style.display = (k === key) ? '' : 'none';
   });
 }
 
-function getPM(){
-  return document.querySelector('input[name="pm"]:checked')?.value || 'gcash';
+// ---------- auth actions ----------
+async function signIn() {
+  authMsg.textContent = '';
+  const email = emailInput.value.trim();
+  const password = passInput.value;
+  if (!email || !password) {
+    authMsg.textContent = 'Enter email and password.';
+    return;
+  }
+  const { error } = await supabase.auth.signInWithPassword({ email, password });
+  if (error) {
+    authMsg.textContent = error.message;
+    return;
+  }
+  authModal.close();
 }
 
-async function loadProducts(){
-  const { data, error } = await supabase.from('products')
-    .select('id,name,category,price,available')
+async function signUp() {
+  authMsg.textContent = '';
+  const email = emailInput.value.trim();
+  const password = passInput.value;
+  if (!email || !password) {
+    authMsg.textContent = 'Enter email and password.';
+    return;
+  }
+  const { error } = await supabase.auth.signUp({ email, password });
+  if (error) { authMsg.textContent = error.message; return; }
+  authMsg.textContent = 'Account created. Please sign in.';
+}
+
+// ---------- products ----------
+async function loadProducts() {
+  productsGrid.innerHTML = `<p class="muted">Loading…</p>`;
+
+  const { data, error } = await supabase
+    .from('products')
+    .select('id,name,price,available,category')
     .eq('available', true)
-    .order('category', {ascending:true})
-    .order('name', {ascending:true});
-  if(error){ alert(error.message); return; }
+    .order('name');
+
+  if (error) {
+    productsGrid.innerHTML = `<p class="warn">${error.message}</p>`;
+    return;
+  }
   products = data || [];
-}
 
-function groupBy(arr, key){
-  return arr.reduce((m,x)=>((m[x[key]]??=[]).push(x),m),{});
-}
+  if (!products.length) {
+    productsGrid.innerHTML = `<p class="muted">No available accounts yet.</p>`;
+    return;
+  }
 
-function renderByCategory(){
-  const cats = groupBy(products,'category');
-  const pills = $id('catPills'); pills.innerHTML='';
-  const sec  = $id('catSections'); sec.innerHTML='';
-
-  const catNames = Object.keys(cats);
-  catNames.forEach((c,i)=>{
-    const pill = document.createElement('div');
-    pill.className = 'pill' + (i===0?' active':'');
-    pill.textContent = c;
-    pill.dataset.cat = c;
-    pills.appendChild(pill);
-  });
-
-  pills.addEventListener('click', e=>{
-    const p = e.target.closest('.pill'); if(!p) return;
-    pills.querySelectorAll('.pill').forEach(x=>x.classList.remove('active'));
-    p.classList.add('active');
-    showCat(p.dataset.cat);
-  });
-
-  // sections for each category with preview + view all
-  for(const c of catNames){
-    const wrap = document.createElement('section');
-    wrap.className = 'card';
-    wrap.innerHTML = `
-      <div class="flex"><h3>${c}</h3>
-        <button class="btn ghost small viewAll" data-cat="${c}">View all</button>
+  productsGrid.innerHTML = '';
+  products.forEach(p => {
+    const card = document.createElement('div');
+    card.className = 'card';
+    card.innerHTML = `
+      <div class="row" style="justify-content:space-between;align-items:flex-start">
+        <div>
+          <h3 style="margin:0">${escapeHtml(p.name)}</h3>
+          <div class="muted">${escapeHtml(p.category || '')}</div>
+        </div>
       </div>
-      <div class="grid" id="grid-${cssId(c)}"></div>
+      <div class="muted" style="margin:6px 0">₱${Number(p.price||0).toFixed(2)} / month (computed on checkout)</div>
+      <div class="row" style="gap:8px">
+        <a class="btn" href="account.html">Order</a>
+      </div>
     `;
-    sec.appendChild(wrap);
-    renderGrid(c, /*preview*/ true);
-  }
-
-  // view all toggles
-  sec.addEventListener('click', e=>{
-    const b = e.target.closest('.viewAll'); if(!b) return;
-    renderGrid(b.dataset.cat, /*preview*/ false);
+    productsGrid.appendChild(card);
   });
-
-  // initial cat highlight shows first section at top – already rendered
 }
 
-function cssId(s){ return s.toLowerCase().replace(/\s+/g,'-'); }
-
-function renderGrid(cat, preview){
-  const list = products.filter(p=>p.category===cat);
-  const items = preview ? list.slice(0,8) : list;
-
-  const grid = $id(`grid-${cssId(cat)}`);
-  grid.innerHTML = items.map(p => `
-    <div class="card">
-      <h3>${escapeHtml(p.name)}</h3>
-      <div class="muted">Click order to see pricing</div>
-      <div class="divider"></div>
-      <button class="btn orderBtn" data-id="${p.id}">Order</button>
-    </div>
-  `).join('');
+function escapeHtml(s){
+  return String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 }
-
-function openCheckout(prod){
-  currentProd = prod;
-  $id('ckTitle').textContent = `Checkout — ${prod.name}`;
-  $id('ownSel').value = 'solo';
-  $id('credSel').value = 'account';
-  $id('durSel').value  = '30';
-  updateAmount();
-  $id('ckModal').style.display = 'flex';
-}
-
-function updateAmount(){
-  if(!currentProd){ $id('amountTxt').textContent='₱0.00'; return; }
-
-  const days = parseInt($id('durSel').value,10);
-  const months = Math.max(1, Math.round(days/30*100)/100);
-  const isShared = ($id('ownSel').value === 'shared');
-  const base = Number(currentProd.price) * months;
-  const total = isShared ? base * SHARED_FACTOR : base;
-
-  $id('amountTxt').textContent = `₱${(total||0).toFixed(2)}`;
-}
-
-async function placeOrder(){
-  try{
-    const { data: sess } = await supabase.auth.getSession();
-    if(!sess.session){
-      alert('Please sign in first (top right: Login / Sign up).');
-      return;
-    }
-    const me = sess.session.user;
-
-    const payload = {
-      product_id: currentProd.id,
-      product_name: currentProd.name,
-      price: Number($id('amountTxt').textContent.replace(/[₱,]/g,'')) || 0,
-      status: 'pending',
-      payment_method: getPM(),
-      payment_ref: $id('refNo').value.trim() || null,
-      payment_sent_at: $id('sentAt').value ? new Date($id('sentAt').value).toISOString() : null,
-      duration_days: parseInt($id('durSel').value,10) || 30,
-      ownership_kind: $id('ownSel').value,
-      cred_kind: $id('credSel').value,
-      customer_id: me.id,
-      customer_email: me.email,
-      customer_name: me.user_metadata?.name || null
-    };
-
-    // 1) create order
-    const { data: order, error } = await supabase.from('orders').insert(payload).select().single();
-    if(error) throw error;
-
-    // 2) upload receipt (optional)
-    const f = $id('receiptFile').files?.[0];
-    if(f){
-      const path = `${order.id}/${Date.now()}_${f.name.replace(/[^a-z0-9_.-]/gi,'_')}`;
-      const up = await supabase.storage.from('receipts').upload(path, f, { upsert:false });
-      if(!up.error){
-        const { data: pub } = supabase.storage.from('receipts').getPublicUrl(path);
-        await supabase.from('orders').update({ receipt_url: pub.publicUrl }).eq('id', order.id);
-      }
-    }
-
-    // 3) notify admin (Edge Function)
-    try{
-      await supabase.functions.invoke('notify', { body: { 
-        kind:'new_order',
-        order_id: order.id,
-        product: order.product_name,
-        amount: order.price,
-        customer: order.customer_email,
-        pm: order.payment_method
-      }});
-    }catch(_){/* ignore */}
-
-    $id('msg').textContent = 'Order placed! We’ll verify payment then deliver credentials by email.';
-    setTimeout(()=>{ $id('ckModal').style.display='none'; }, 1500);
-  }catch(err){
-    $id('msg').textContent = err.message;
-  }
-}
-
-function escapeHtml(s){return String(s??'').replace(/[&<>"']/g,c=>({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));}
