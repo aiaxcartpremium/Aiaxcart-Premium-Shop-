@@ -61,22 +61,33 @@
           <select id="invProd" required>
             <option value="">Select product...</option>
           </select>
-          <input id="invUser" placeholder="Username / Email / Code" required />
-          <input id="invSecret" placeholder="Password / Token" required />
+          <input id="invUser" placeholder="Email" required />
+          <input id="invSecret" placeholder="Password" required />
           <textarea id="invNotes" placeholder="Notes (optional)"></textarea>
 
           <fieldset class="row">
             <legend>Account type</legend>
-            <label><input type="radio" name="accType" value="solo" checked /> Solo</label>
-            <label><input type="radio" name="accType" value="shared" /> Shared</label>
-            <label><input type="radio" name="accType" value="profile" /> Profile</label>
+            <label><input type="radio" name="accType" value="solo profile" checked /> Solo</label>
+            <label><input type="radio" name="accType" value="shared profile" /> Shared</label>
+            <label><input type="radio" name="accType" value="solo account" /> Profile</label>
+            <label><input type="radio" name="accType" value="shared account" /> Profile</label>
           </fieldset>
 
           <label>Duration</label>
           <select id="invDuration">
+            <option>7 days</option>
+            <option>14 days</option>
             <option>1 month</option>
+            <option>2 months</option>
             <option>3 months</option>
+            <option>4 months</option>
+            <option>5 months</option>
             <option>6 months</option>
+            <option>7 months</option>
+            <option>8 months</option>
+            <option>9 months</option>
+            <option>10 months</option>
+            <option>11 months</option>
             <option>1 year</option>
             <option>lifetime</option>
           </select>
