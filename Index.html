@@ -1,0 +1,89 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Aiaxcart Premium Shop</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <header>
+    <h1>Aiaxcart Premium Shop</h1>
+    <nav id="topTabs">
+      <a href="#" class="active" data-tab="categories">Categories</a>
+      <a href="#" data-tab="payments">Mode of Payment</a>
+      <a href="#" data-tab="rules">Rules</a>
+      <a href="#" data-tab="feedback">Feedback</a>
+      <a href="#" data-tab="onhand">On-hand</a>
+    </nav>
+    <a href="admin.html" class="btn ghost">Admin</a>
+  </header>
+
+  <main class="container">
+    <section id="categories" class="tab">
+      <div class="section-head">
+        <h2>Shop by Category</h2>
+        <div id="catChips"></div>
+      </div>
+      <div id="grid" class="grid"></div>
+    </section>
+
+    <section id="payments" class="tab hidden">
+      <h2>Accepted Payments</h2>
+      <ul class="list">
+        <li><b>GCash</b> — send exact amount then include ref. # on checkout</li>
+        <li><b>Maya</b> — supported; include ref. # on checkout</li>
+        <li><b>Bank Transfer</b> — BDO/UnionBank (send receipt)</li>
+      </ul>
+    </section>
+
+    <section id="rules" class="tab hidden">
+      <h2>Rules</h2>
+      <ol class="list">
+        <li>Orders are processed after a valid reference number or receipt is submitted.</li>
+        <li>No refunds for digital items once delivered.</li>
+        <li>Use a correct, reachable email address.</li>
+        <li>Message us for any concerns via Telegram or Messenger.</li>
+      </ol>
+    </section>
+
+    <section id="feedback" class="tab hidden">
+      <h2>Feedback / Vouches</h2>
+      <textarea id="feedbackText" class="input" placeholder="Write your feedback here…"></textarea>
+      <button class="btn" id="sendFeedback">Send Feedback</button>
+      <div id="feedbackList" class="stack" style="margin-top:16px;"></div>
+    </section>
+
+    <section id="onhand" class="tab hidden">
+      <h2>Available On-hand Accounts</h2>
+      <div id="onhandList" class="grid"></div>
+    </section>
+  </main>
+
+  <footer>© 2025 Aiaxcart Premium Shop</footer>
+
+  <!-- Checkout modal -->
+  <dialog id="checkout">
+    <form method="dialog" class="modal">
+      <button value="close" class="close">×</button>
+      <h3 id="ckTitle">Checkout</h3>
+      <p id="ckSubtitle" class="muted"></p>
+
+      <label class="label">Name</label>
+      <input id="ckName" class="input" required />
+      <label class="label">Email</label>
+      <input id="ckEmail" class="input" type="email" required />
+      <label class="label">Reference number (or upload receipt)</label>
+      <input id="ckRef" class="input" placeholder="e.g., GCash REF123456789" />
+      <input id="ckFile" class="input" type="file" accept="image/*,application/pdf" />
+      <div class="hstack right">
+        <button class="btn" id="placeBtn" type="button">Place Order</button>
+      </div>
+      <p id="ckMsg" class="muted"></p>
+    </form>
+  </dialog>
+
+  <script type="module" src="app.js"></script>
+  <script type="module" src="shop.js"></script>
+</body>
+</html>
