@@ -1,0 +1,83 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <title>Admin • Aiaxcart</title>
+  <link rel="stylesheet" href="style.css"/>
+</head>
+<body>
+<header>
+  <h1>Admin</h1>
+  <div class="hstack">
+    <a class="btn ghost" href="index.html">Storefront</a>
+  </div>
+</header>
+
+<main class="container">
+  <section id="authBox">
+    <h2>Login</h2>
+    <div class="stack" style="max-width:420px">
+      <input id="email" class="input" type="email" placeholder="Email"/>
+      <input id="password" class="input" type="password" placeholder="Password"/>
+      <button id="loginBtn" class="btn">Login</button>
+      <p id="authMsg" class="muted"></p>
+    </div>
+  </section>
+
+  <section id="adminArea" class="hidden">
+    <div class="hstack right">
+      <button id="logoutBtn" class="btn ghost">Logout</button>
+    </div>
+
+    <div class="grid">
+      <!-- Products -->
+      <div class="card">
+        <h3>Products</h3>
+        <form id="prodForm" class="stack">
+          <select id="pCat" class="input"></select>
+          <input id="pName" class="input" placeholder="Name"/>
+          <input id="pPrice" class="input" type="number" step="0.01" placeholder="Price"/>
+          <textarea id="pDesc" class="input" placeholder="Description"></textarea>
+          <label><input type="checkbox" id="pAvail" checked/> Available</label>
+          <input id="pStock" class="input" type="number" placeholder="Available stock (on-hand count)"/>
+          <button class="btn" type="submit">Add / Update</button>
+        </form>
+        <div id="prodList" class="stack" style="margin-top:12px;"></div>
+      </div>
+
+      <!-- On-hand Accounts -->
+      <div class="card">
+        <h3>On-hand Accounts</h3>
+        <form id="invForm" class="stack">
+          <select id="invProd" class="input"></select>
+          <input id="invUser" class="input" placeholder="Username / Email / Code"/>
+          <input id="invSecret" class="input" placeholder="Password / Token"/>
+          <input id="invNotes" class="input" placeholder="Notes (optional)"/>
+          <button class="btn" type="submit">Add Account</button>
+        </form>
+        <div id="invList" class="stack" style="margin-top:12px;"></div>
+      </div>
+
+      <!-- Orders -->
+      <div class="card">
+        <h3>Orders</h3>
+        <div id="orderList" class="stack"></div>
+        <div class="hstack right" style="margin-top:8px;">
+          <button class="btn ghost" id="csvBtn">Export CSV</button>
+        </div>
+      </div>
+
+      <!-- Sales Summary -->
+      <div class="card">
+        <h3>Sales Summary</h3>
+        <div id="stats" class="stack"></div>
+      </div>
+    </div>
+  </section>
+</main>
+
+<script type="module" src="app.js"></script>
+<script type="module" src="admin.js"></script>
+</body>
+</html>
