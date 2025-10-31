@@ -1,107 +1,101 @@
 <!doctype html>
 <html lang="en">
-<head>
-  <meta charset="utf-8">
-  <title>Aiaxcart Premium Shop</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <link href="style.css" rel="stylesheet">
-  <script src="app.js"></script>
-</head>
-<body>
-  <header class="container header">
-    <div class="brand">Aiaxcart Premium Shop</div>
-    <nav class="nav">
-      <a class="btn ghost" href="admin.html">Admin</a>
-      <a class="btn" href="auth.html" id="loginLink">Login / Sign up</a>
-      <a class="btn ghost" href="account.html">My Account</a>
-    </nav>
-  </header>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Aiaxcart Premium Shop</title>
 
-  <main class="container">
-    <h1>Premium Accounts</h1>
-    <div class="pills" id="catPills"></div>
-    <div id="catSections"></div>
-  </main>
+    <!-- Fonts & Styles -->
+    <link rel="stylesheet" href="style.css" />
 
-  <!-- Checkout Modal -->
-  <div class="modalScrim" id="ckModal">
-    <div class="modal">
-      <div class="flex">
-        <h3 id="ckTitle">Checkout</h3>
-        <button class="btn ghost small" id="ckClose">Close</button>
+    <!-- Supabase (must be before app.js) -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <!-- Your Supabase client initializer lives in app.js (keep your URL/KEY inside) -->
+    <script defer src="app.js"></script>
+  </head>
+  <body>
+    <header class="site-header">
+      <div class="container row" style="justify-content:space-between;align-items:center;">
+        <h1 class="brand">Aiaxcart Premium Shop</h1>
+
+        <nav class="top-nav row" style="gap:12px;">
+          <a href="admin.html" class="btn ghost" id="adminLink">Admin</a>
+          <button class="btn" id="openAuth">Login / Sign up</button>
+          <a href="account.html" class="btn ghost" id="myAccountLink" style="display:none">My Account</a>
+        </nav>
       </div>
-      <div class="divider"></div>
 
-      <div class="row" style="gap:14px">
-        <div style="flex:1">
-          <label>Ownership</label>
-          <select id="ownSel">
-            <option value="solo">Solo</option>
-            <option value="shared">Shared</option>
-          </select>
+      <div class="container row tabbar" id="tabs" style="margin-top:12px;gap:14px;">
+        <a href="#" class="tab active" data-tab="accounts">Accounts Available</a>
+        <a href="#" class="tab" data-tab="payments">Mode of Payment</a>
+        <a href="#" class="tab" data-tab="rules">Rules</a>
+        <a href="#" class="tab" data-tab="feedback">Feedback</a>
+        <a href="#" class="tab" data-tab="about">About</a>
+      </div>
+    </header>
+
+    <main class="container" style="padding-top:12px;">
+      <!-- ACCOUNTS SECTION -->
+      <section class="tabpanel" id="tab-accounts" style="">
+        <h2>Premium Accounts</h2>
+        <div id="productsGrid" class="grid"></div>
+      </section>
+
+      <!-- MODE OF PAYMENT -->
+      <section class="tabpanel" id="tab-payments" style="display:none">
+        <h2>Mode of Payment</h2>
+        <p>We accept GCash and Maya. Tap “Order” on any service, choose Solo/Shared and duration, then follow the instructions.</p>
+      </section>
+
+      <!-- RULES -->
+      <section class="tabpanel" id="tab-rules" style="display:none">
+        <h2>Rules</h2>
+        <ul class="bullets">
+          <li>No password change unless stated.</li>
+          <li>Use only on allowed devices.</li>
+          <li>Be respectful—no sharing credentials.</li>
+        </ul>
+      </section>
+
+      <!-- FEEDBACK -->
+      <section class="tabpanel" id="tab-feedback" style="display:none">
+        <h2>Feedback</h2>
+        <p>Send your feedback/vouch via our form or message us on Telegram/Messenger.</p>
+      </section>
+
+      <!-- ABOUT -->
+      <section class="tabpanel" id="tab-about" style="display:none">
+        <h2>About</h2>
+        <p>Classy premium accounts • GCash / Maya.</p>
+      </section>
+    </main>
+
+    <!-- AUTH MODAL -->
+    <dialog id="authModal" class="modal">
+      <form method="dialog" class="card" id="authCard">
+        <div class="row" style="justify-content:space-between;align-items:center">
+          <h3 style="margin:0">Sign in</h3>
+          <button type="button" class="btn ghost" id="closeAuth">Close</button>
         </div>
-        <div style="flex:1">
-          <label>Type</label>
-          <select id="credSel">
-            <option value="account">Account</option>
-            <option value="profile">Profile</option>
-          </select>
+
+        <label>Email
+          <input type="email" id="authEmail" placeholder="you@email.com" required />
+        </label>
+
+        <label>Password
+          <input type="password" id="authPass" placeholder="••••••••" required />
+        </label>
+
+        <div class="row" style="gap:10px;flex-wrap:wrap">
+          <button type="button" id="doLogin" class="btn">Sign in</button>
+          <button type="button" id="doSignup" class="btn ghost">Create account</button>
         </div>
-        <div style="flex:1">
-          <label>Duration</label>
-          <select id="durSel">
-            <option value="7">7 days</option>
-            <option value="14">14 days</option>
-            <option value="30" selected>1 month</option>
-            <option value="60">2 months</option>
-            <option value="90">3 months</option>
-            <option value="180">6 months</option>
-            <option value="365">12 months</option>
-          </select>
-        </div>
-      </div>
 
-      <div class="divider"></div>
+        <p id="authMsg" class="muted" style="margin-top:8px"></p>
+      </form>
+    </dialog>
 
-      <div class="row">
-        <label>Payment method</label>
-        <div class="row" style="gap:16px;margin-left:10px">
-          <label><input type="radio" name="pm" value="gcash" checked> GCash</label>
-          <label><input type="radio" name="pm" value="maya"> Maya</label>
-        </div>
-      </div>
-      <div id="gcashInfo" class="row" style="gap:10px;margin:8px 0">
-        <span class="badge">GCash</span> <span class="muted">Send to: <b id="gcashNum">09XX-XXX-XXXX</b></span>
-      </div>
-      <div id="mayaInfo" class="row hidden" style="gap:10px;margin:8px 0">
-        <span class="badge">Maya</span> <span class="muted">Send to: <b id="mayaNum">09YY-YYY-YYYY</b></span>
-      </div>
-
-      <div class="row" style="gap:14px">
-        <div style="flex:1">
-          <label>Payment Ref # (optional)</label>
-          <input id="refNo" placeholder="1234567890">
-        </div>
-        <div style="flex:1">
-          <label>Time sent (optional)</label>
-          <input id="sentAt" type="datetime-local">
-        </div>
-      </div>
-
-      <div>
-        <label>Upload receipt (optional)</label>
-        <input id="receiptFile" type="file" accept="image/*,application/pdf">
-      </div>
-
-      <div class="divider"></div>
-      <div class="flex">
-        <div class="price" id="amountTxt">₱0.00</div>
-        <button class="btn" id="placeBtn">Place order</button>
-      </div>
-      <p id="msg" class="muted"></p>
-    </div>
-  </div>
-
-  <script src="shop.js" defer></script>
-</body>
+    <!-- Page controller (auth toggle + tabs + product list) -->
+    <script defer src="shop.js"></script>
+  </body>
 </html>
