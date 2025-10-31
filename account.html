@@ -1,0 +1,99 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>My Account — Aiaxcart Premium Shop</title>
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <link rel="stylesheet" href="style.css" />
+  <style>
+    .container{max-width:1000px;margin:40px auto;padding:0 16px}
+    .card{background:#fff;border:1px solid #eee;border-radius:16px;padding:20px;margin:14px 0;box-shadow:0 4px 14px rgba(0,0,0,.03)}
+    .row{display:flex;gap:16px;flex-wrap:wrap}
+    .col{flex:1 1 300px}
+    .muted{color:#777}
+    .btn{border:0;border-radius:10px;padding:10px 14px;background:#b77a7a;color:#fff;cursor:pointer}
+    .btn[disabled]{opacity:.5;cursor:not-allowed}
+    input,select,textarea{width:100%;padding:10px;border-radius:10px;border:1px solid #ddd}
+    h2{margin:0 0 12px}
+    .right{float:right}
+    .pill{display:inline-block;padding:4px 10px;border-radius:999px;background:#f4e9e9;margin-left:8px}
+    pre{white-space:pre-wrap;word-break:break-word;background:#fafafa;border-radius:8px;padding:10px;border:1px dashed #eee}
+    .cred{background:#fcfcff;border-left:4px solid #cab0ff;padding:8px 12px;border-radius:8px}
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="row" style="align-items:center">
+      <h1 style="margin:0">My Account</h1>
+      <a href="index.html" class="right btn" style="background:#e7d6d6;color:#6b4f4f">← Back to Store</a>
+    </div>
+
+    <!-- AUTH -->
+    <div class="card" id="authBox">
+      <div class="row">
+        <div class="col">
+          <h2>Sign up</h2>
+          <input id="suName" placeholder="Full name" />
+          <input id="suEmail" placeholder="Email" type="email" />
+          <input id="suPass" placeholder="Password" type="password" />
+          <button class="btn" id="suBtn">Create account</button>
+          <div class="muted" id="suMsg"></div>
+        </div>
+        <div class="col">
+          <h2>Sign in</h2>
+            <input id="siEmail" placeholder="Email" type="email" />
+            <input id="siPass" placeholder="Password" type="password" />
+            <button class="btn" id="siBtn">Sign in</button>
+            <div class="muted" id="siMsg"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ACCOUNT AREA -->
+    <div class="card" id="acctBox" style="display:none">
+      <div class="row" style="align-items:center">
+        <div class="col"><h2>Welcome, <span id="meName">—</span></h2></div>
+        <div class="col" style="text-align:right"><button class="btn" id="outBtn">Sign out</button></div>
+      </div>
+
+      <!-- Place order -->
+      <div class="row">
+        <div class="col card">
+          <h3>Place an Order</h3>
+          <label>Product</label>
+          <select id="oProd"></select>
+
+          <div class="row">
+            <div class="col">
+              <label>Payment method</label>
+              <select id="oPay">
+                <option value="gcash">GCash</option>
+                <option value="maya">Maya</option>
+                <option value="cash">Cash</option>
+              </select>
+            </div>
+            <div class="col">
+              <label>Payment reference (required)</label>
+              <input id="oRef" placeholder="e.g., 1234567890" />
+            </div>
+          </div>
+
+          <label>Upload receipt (optional, image/pdf)</label>
+          <input id="oFile" type="file" accept="image/*,application/pdf" />
+
+          <button class="btn" id="oBtn">Place order</button>
+          <div class="muted" id="oMsg"></div>
+        </div>
+
+        <div class="col card">
+          <h3>My Orders</h3>
+          <div id="oList" class="muted">No orders yet.</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script type="module" src="app.js"></script>
+  <script type="module" src="account.js"></script>
+</body>
+</html>
