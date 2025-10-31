@@ -1,51 +1,97 @@
 <!doctype html>
 <html lang="en">
 <head>
-  <meta charset="utf-8">
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
   <title>My Account • Aiaxcart</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <link href="style.css" rel="stylesheet">
+  <link rel="stylesheet" href="style.css" />
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="app.js"></script>
 </head>
 <body>
-<header class="container header">
-  <a class="btn ghost" href="index.html">← Back to Store</a>
-  <div class="nav">
-    <a class="btn ghost" href="feedback.html" id="fbLink">Feedback</a>
+  <header class="site-header container row" style="justify-content:space-between;align-items:center">
+    <a class="btn ghost" href="index.html">← Back to Store</a>
+    <h1>My Account</h1>
     <button id="logoutBtn" class="btn ghost">Logout</button>
-  </div>
-</header>
+  </header>
 
-<main class="container">
-  <!-- Auth gate -->
-  <section id="authGate" class="card" style="max-width:560px">
-    <h2>Sign in</h2>
-    <form id="loginForm">
-      <div class="row" style="gap:12px">
-        <div style="flex:1">
-          <label>Email</label>
-          <input id="loginEmail" type="email" required>
-        </div>
-        <div style="flex:1">
-          <label>Password</label>
-          <input id="loginPass" type="password" required>
-        </div>
-      </div>
-      <div class="row" style="gap:10px;margin-top:10px">
-        <button id="loginBtn" type="button" class="btn">Sign in</button>
-        <button id="signupBtn" type="button" class="btn ghost">Create account</button>
+  <main class="container">
+    <section id="authGate" class="card" style="max-width:520px;margin:auto;display:none">
+      <h3>Sign in</h3>
+      <label>Email <input id="loginEmail" type="email" required></label>
+      <label>Password <input id="loginPass" type="password" required></label>
+      <div class="row" style="gap:8px">
+        <button id="loginBtn" class="btn">Sign in</button>
+        <button id="signupBtn" class="btn ghost">Create account</button>
       </div>
       <p id="authMsg" class="muted"></p>
-    </form>
-  </section>
+    </section>
 
-  <!-- App -->
-  <section id="app" class="hidden">
-    <h2>My Orders</h2>
-    <div id="ordersBox"></div>
-  </section>
-</main>
+    <section id="app" style="display:none">
+      <div class="grid two">
+        <div class="card">
+          <h3>Checkout</h3>
+          <label>Product
+            <select id="pSel"></select>
+          </label>
+          <label>Ownership
+            <select id="ownSel">
+              <option value="solo">Solo</option>
+              <option value="shared">Shared</option>
+            </select>
+          </label>
+          <label>Type
+            <select id="credSel">
+              <option value="account">Account</option>
+              <option value="profile">Profile</option>
+            </select>
+          </label>
+          <label>Duration
+            <select id="durSel">
+              <option value="7">7 days</option>
+              <option value="14">14 days</option>
+              <option value="30" selected>1 month</option>
+              <option value="60">2 months</option>
+              <option value="90">3 months</option>
+              <option value="180">6 months</option>
+              <option value="365">12 months</option>
+            </select>
+          </label>
 
-<script src="account.js" defer></script>
+          <div class="card muted" style="margin:10px 0">
+            Amount: <b id="amountTxt">₱0.00</b>
+          </div>
+
+          <div class="row" style="gap:12px">
+            <label class="row" style="align-items:center;gap:6px"><input type="radio" name="pm" value="gcash" checked> GCash</label>
+            <label class="row" style="align-items:center;gap:6px"><input type="radio" name="pm" value="maya"> Maya</label>
+          </div>
+
+          <div id="gcashInfo" class="muted" style="display:flex;gap:8px;margin:8px 0">Send to: <b id="gcashNum">09XX-XXX-XXXX</b></div>
+          <div id="mayaInfo" class="muted"  style="display:none;gap:8px;margin:8px 0">Send to: <b id="mayaNum">09YY-YYY-YYYY</b></div>
+
+          <label>Reference No. (optional)
+            <input id="refNo" placeholder="GCash/Maya Ref. No." />
+          </label>
+          <label>Time sent (optional)
+            <input id="sentAt" type="datetime-local" />
+          </label>
+          <label>Receipt (optional)
+            <input id="receiptFile" type="file" accept="image/*" />
+          </label>
+
+          <button id="placeBtn" class="btn">Place order</button>
+          <p id="msg" class="muted" style="margin-top:8px"></p>
+        </div>
+
+        <div class="card">
+          <h3>My Orders</h3>
+          <div id="ordersBox"></div>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <script src="account.js" defer></script>
 </body>
 </html>
