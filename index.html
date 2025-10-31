@@ -1,101 +1,80 @@
 <!doctype html>
 <html lang="en">
-  <head>
-    <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>Aiaxcart Premium Shop</title>
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Aiaxcart Premium Shop</title>
+  <link rel="stylesheet" href="style.css" />
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="app.js"></script>
+</head>
+<body>
+  <header class="site-header">
+    <div class="container row" style="justify-content:space-between;align-items:center;">
+      <h1 class="brand">Aiaxcart Premium Shop</h1>
+      <nav class="row" style="gap:10px">
+        <a id="adminLink" class="btn ghost" href="admin.html">Admin</a>
+        <button id="openAuth" class="btn">Login / Sign up</button>
+        <a id="myAccountLink" class="btn ghost" href="account.html" style="display:none">My Account</a>
+      </nav>
+    </div>
 
-    <!-- Fonts & Styles -->
-    <link rel="stylesheet" href="style.css" />
+    <div id="tabs" class="container row" style="gap:12px;margin-top:10px">
+      <a href="#" class="tab active" data-tab="accounts">Accounts Available</a>
+      <a href="#" class="tab" data-tab="payments">Mode of Payment</a>
+      <a href="#" class="tab" data-tab="rules">Rules</a>
+      <a href="#" class="tab" data-tab="feedback">Feedback</a>
+      <a href="#" class="tab" data-tab="about">About</a>
+    </div>
+  </header>
 
-    <!-- Supabase (must be before app.js) -->
-    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-    <!-- Your Supabase client initializer lives in app.js (keep your URL/KEY inside) -->
-    <script defer src="app.js"></script>
-  </head>
-  <body>
-    <header class="site-header">
-      <div class="container row" style="justify-content:space-between;align-items:center;">
-        <h1 class="brand">Aiaxcart Premium Shop</h1>
+  <main class="container">
+    <section id="tab-accounts" class="tabpanel">
+      <h2>Premium Accounts</h2>
+      <div id="productsGrid" class="grid"></div>
+    </section>
 
-        <nav class="top-nav row" style="gap:12px;">
-          <a href="admin.html" class="btn ghost" id="adminLink">Admin</a>
-          <button class="btn" id="openAuth">Login / Sign up</button>
-          <a href="account.html" class="btn ghost" id="myAccountLink" style="display:none">My Account</a>
-        </nav>
+    <section id="tab-payments" class="tabpanel" style="display:none">
+      <h2>Mode of Payment</h2>
+      <p>We accept GCash and Maya.</p>
+    </section>
+
+    <section id="tab-rules" class="tabpanel" style="display:none">
+      <h2>Rules</h2>
+      <ul class="bullets">
+        <li>No password change unless allowed.</li>
+        <li>Only allowed device count per plan.</li>
+      </ul>
+    </section>
+
+    <section id="tab-feedback" class="tabpanel" style="display:none">
+      <h2>Feedback</h2>
+      <p>Send vouch/feedback in the form or chat.</p>
+    </section>
+
+    <section id="tab-about" class="tabpanel" style="display:none">
+      <h2>About</h2>
+      <p>Classy premium accounts • GCash / Maya</p>
+    </section>
+  </main>
+
+  <!-- Auth modal -->
+  <dialog id="authModal" class="modal">
+    <form method="dialog" class="card" id="authForm">
+      <div class="row" style="justify-content:space-between;align-items:center">
+        <h3 style="margin:0">Sign in</h3>
+        <button type="button" class="btn ghost" id="closeAuth">Close</button>
       </div>
-
-      <div class="container row tabbar" id="tabs" style="margin-top:12px;gap:14px;">
-        <a href="#" class="tab active" data-tab="accounts">Accounts Available</a>
-        <a href="#" class="tab" data-tab="payments">Mode of Payment</a>
-        <a href="#" class="tab" data-tab="rules">Rules</a>
-        <a href="#" class="tab" data-tab="feedback">Feedback</a>
-        <a href="#" class="tab" data-tab="about">About</a>
+      <label>Email <input type="email" id="authEmail" required></label>
+      <label>Password <input type="password" id="authPass" required></label>
+      <div class="row" style="gap:10px">
+        <button type="button" id="doLogin" class="btn">Sign in</button>
+        <button type="button" id="doSignup" class="btn ghost">Create account</button>
       </div>
-    </header>
+      <p id="authMsg" class="muted" style="margin-top:8px"></p>
+    </form>
+  </dialog>
 
-    <main class="container" style="padding-top:12px;">
-      <!-- ACCOUNTS SECTION -->
-      <section class="tabpanel" id="tab-accounts" style="">
-        <h2>Premium Accounts</h2>
-        <div id="productsGrid" class="grid"></div>
-      </section>
-
-      <!-- MODE OF PAYMENT -->
-      <section class="tabpanel" id="tab-payments" style="display:none">
-        <h2>Mode of Payment</h2>
-        <p>We accept GCash and Maya. Tap “Order” on any service, choose Solo/Shared and duration, then follow the instructions.</p>
-      </section>
-
-      <!-- RULES -->
-      <section class="tabpanel" id="tab-rules" style="display:none">
-        <h2>Rules</h2>
-        <ul class="bullets">
-          <li>No password change unless stated.</li>
-          <li>Use only on allowed devices.</li>
-          <li>Be respectful—no sharing credentials.</li>
-        </ul>
-      </section>
-
-      <!-- FEEDBACK -->
-      <section class="tabpanel" id="tab-feedback" style="display:none">
-        <h2>Feedback</h2>
-        <p>Send your feedback/vouch via our form or message us on Telegram/Messenger.</p>
-      </section>
-
-      <!-- ABOUT -->
-      <section class="tabpanel" id="tab-about" style="display:none">
-        <h2>About</h2>
-        <p>Classy premium accounts • GCash / Maya.</p>
-      </section>
-    </main>
-
-    <!-- AUTH MODAL -->
-    <dialog id="authModal" class="modal">
-      <form method="dialog" class="card" id="authCard">
-        <div class="row" style="justify-content:space-between;align-items:center">
-          <h3 style="margin:0">Sign in</h3>
-          <button type="button" class="btn ghost" id="closeAuth">Close</button>
-        </div>
-
-        <label>Email
-          <input type="email" id="authEmail" placeholder="you@email.com" required />
-        </label>
-
-        <label>Password
-          <input type="password" id="authPass" placeholder="••••••••" required />
-        </label>
-
-        <div class="row" style="gap:10px;flex-wrap:wrap">
-          <button type="button" id="doLogin" class="btn">Sign in</button>
-          <button type="button" id="doSignup" class="btn ghost">Create account</button>
-        </div>
-
-        <p id="authMsg" class="muted" style="margin-top:8px"></p>
-      </form>
-    </dialog>
-
-    <!-- Page controller (auth toggle + tabs + product list) -->
-    <script defer src="shop.js"></script>
-  </body>
+  <script src="shop.js" defer></script>
+</body>
 </html>
