@@ -1,105 +1,90 @@
 <!doctype html>
 <html lang="en">
 <head>
-  <meta charset="utf-8">
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
   <title>Admin • Aiaxcart</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <link href="style.css" rel="stylesheet">
+  <link rel="stylesheet" href="style.css" />
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="app.js"></script>
 </head>
 <body>
-<header class="container header">
-  <div class="brand">Admin</div>
-  <a class="btn ghost" href="index.html">Storefront</a>
-</header>
+  <header class="site-header container row" style="justify-content:space-between;align-items:center">
+    <h1>Admin</h1>
+    <a href="index.html" class="btn ghost">Storefront</a>
+  </header>
 
-<main class="container">
-  <section id="authBox" class="card" style="max-width:520px">
-    <h2>Login</h2>
-    <input id="email" placeholder="Email">
-    <input id="password" type="password" placeholder="Password" style="margin-top:8px">
-    <button id="loginBtn" class="btn" style="margin-top:10px">Login</button>
-    <p id="authMsg" class="muted"></p>
-  </section>
+  <main class="container">
+    <!-- If not logged in -->
+    <section id="loginGate" class="card" style="max-width:520px;margin:auto;display:none">
+      <h3>Login</h3>
+      <label>Email <input id="adEmail" type="email" required></label>
+      <label>Password <input id="adPass" type="password" required></label>
+      <button id="adLogin" class="btn">Login</button>
+      <p id="adMsg" class="muted"></p>
+    </section>
 
-  <section id="adminArea" class="hidden">
-    <div class="flex" style="margin-bottom:12px">
-      <h2>Dashboard</h2>
-      <button id="logoutBtn" class="btn ghost small">Logout</button>
-    </div>
-
-    <div class="grid" style="grid-template-columns:1.2fr 1.2fr 1fr 1fr">
-      <!-- Products -->
-      <div class="card">
-        <h3>Products</h3>
-        <div class="row" style="gap:8px">
-          <select id="pCat">
-            <option>Entertainment</option>
-            <option>Streaming</option>
-            <option>Educational</option>
-            <option>Editing</option>
-            <option>AI</option>
-          </select>
-          <input id="pName" placeholder="Name">
-        </div>
-        <div class="row" style="gap:8px;margin-top:8px">
-          <input id="pPrice" type="number" step="0.01" placeholder="Monthly price">
-          <label class="row" style="gap:6px"><input id="pAvail" type="checkbox" checked> Available</label>
-        </div>
-        <textarea id="pDesc" placeholder="Description (optional)" style="margin-top:8px"></textarea>
-        <input id="pStock" type="number" placeholder="Available stock (on-hand count)" style="margin-top:8px">
-        <button id="pSave" class="btn" style="margin-top:8px">Add / Update</button>
-        <div id="prodList" style="margin-top:10px"></div>
+    <!-- Admin console -->
+    <section id="console" style="display:none">
+      <div class="row" style="justify-content:flex-end;margin-bottom:8px">
+        <button id="adLogout" class="btn ghost">Logout</button>
       </div>
 
-      <!-- On-hand -->
-      <div class="card">
-        <h3>On-hand Accounts</h3>
-        <select id="invProd" style="margin-bottom:8px"></select>
-        <input id="invUser" placeholder="Username / Email / Code">
-        <input id="invSecret" placeholder="Password / Token" style="margin-top:8px">
-        <textarea id="invNotes" placeholder="Notes (optional)" style="margin-top:8px"></textarea>
-        <div class="row" style="gap:8px;margin-top:8px">
-          <select id="invOwn">
-            <option value="solo">Solo</option>
-            <option value="shared">Shared</option>
-          </select>
-          <select id="invCred">
-            <option value="account">Account</option>
-            <option value="profile">Profile</option>
-          </select>
-          <select id="invDur">
-            <option value="7">7 days</option>
-            <option value="14">14 days</option>
-            <option value="30" selected>1 month</option>
-            <option value="60">2 months</option>
-            <option value="90">3 months</option>
-            <option value="180">6 months</option>
-            <option value="365">12 months</option>
-          </select>
+      <div class="grid two">
+        <!-- PRODUCTS -->
+        <div class="card">
+          <h3>Products</h3>
+          <div class="row" style="gap:8px;flex-wrap:wrap">
+            <input id="pName" placeholder="Name" />
+            <input id="pCat"  placeholder="Category (e.g. Entertainment)" />
+            <input id="pPrice" type="number" step="0.01" placeholder="Price / month" />
+            <label class="row" style="gap:6px;align-items:center">
+              <input type="checkbox" id="pAvail" checked /> Available
+            </label>
+            <button id="addProd" class="btn">Add / Update</button>
+          </div>
+          <div id="prodList" class="list" style="margin-top:10px"></div>
         </div>
-        <button id="addInv" class="btn" style="margin-top:8px">Add Account</button>
-        <div id="invList" style="margin-top:10px"></div>
-      </div>
 
-      <!-- Orders -->
-      <div class="card">
-        <div class="flex">
-          <h3>Orders</h3>
-          <button id="csvBtn" class="btn ghost small">Export CSV</button>
+        <!-- INVENTORY -->
+        <div class="card">
+          <h3>On-hand Accounts</h3>
+          <div class="row" style="gap:8px;flex-wrap:wrap">
+            <select id="invProd"></select>
+            <input id="invUser" placeholder="username/email/code" />
+            <input id="invSecret" placeholder="password/token" />
+            <select id="invOwn">
+              <option value="solo">Solo</option>
+              <option value="shared">Shared</option>
+            </select>
+            <select id="invCred">
+              <option value="account">Account</option>
+              <option value="profile">Profile</option>
+            </select>
+            <select id="invDays">
+              <option value="7">7 days</option>
+              <option value="14">14 days</option>
+              <option value="30" selected>1 month</option>
+              <option value="60">2 months</option>
+              <option value="90">3 months</option>
+              <option value="180">6 months</option>
+              <option value="365">12 months</option>
+            </select>
+            <input id="invNotes" placeholder="Notes (optional)" />
+            <button id="addInv" class="btn">Add Account</button>
+          </div>
+          <div id="invList" class="list" style="margin-top:10px"></div>
         </div>
-        <div id="orderList" style="max-height:520px;overflow:auto;margin-top:6px"></div>
       </div>
 
-      <!-- Sales -->
-      <div class="card">
-        <h3>Sales Summary</h3>
-        <div id="stats"></div>
+      <!-- ORDERS -->
+      <div class="card" style="margin-top:12px">
+        <h3>Orders</h3>
+        <div id="ordersBox"></div>
       </div>
-    </div>
-  </section>
-</main>
+    </section>
+  </main>
 
-<script src="admin.js" defer></script>
+  <script src="admin.js" defer></script>
 </body>
 </html>
