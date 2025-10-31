@@ -40,29 +40,44 @@
 <body>
   <div class="wrap">
     <header>
-      <style>
-  .hidden { display:none; }
-</style>
-…
-<div id="authGate" class="card"><!-- DEFAULT: visible -->
-  … (login/signup fields here) …
+  <a href="index.html" class="btn ghost">← Back to Store</a>
+  <h1>My Account</h1>
+  <div style="flex:1"></div>
+  <a href="feedback.html" class="btn">Feedback</a>
+  <button id="logoutBtn" class="btn ghost">Logout</button>
+</header>
+
+<!-- 👇 keep both panels in the same page -->
+<div id="authGate" class="card">
+  <h3>Sign in</h3>
+  <div class="row">
+    <div class="field" style="min-width:260px">
+      <label>Email</label>
+      <input id="loginEmail" type="email" placeholder="you@email.com">
+    </div>
+    <div class="field" style="min-width:220px">
+      <label>Password</label>
+      <input id="loginPass" type="password" placeholder="••••••••">
+    </div>
+  </div>
+  <div class="row">
+    <button id="loginBtn" class="btn primary">Sign in</button>
+    <button id="signupBtn" class="btn">Create account</button>
+  </div>
+  <p class="muted" id="authMsg"></p>
 </div>
 
-<div id="app" class="hidden"><!-- DEFAULT: hidden -->
-  … (orders + checkout grid here) …
+<div id="app" class="hidden">
+  <!-- dito napupunta yung My Orders at Checkout grid -->
 </div>
 
 <noscript>
   <div class="card warn" style="margin-top:12px">
-    This page needs JavaScript. Please enable JavaScript to sign in.
+    This page needs JavaScript enabled to work properly.
   </div>
 </noscript>
 
-<!-- scripts at very end, in this order -->
-<script src="app.js?v=2"></script>
-<script src="account.js?v=2"></script>
 
-    </header>
 
     <div id="authGate" class="card" style="display:none;">
       <h3>Sign in</h3>
@@ -192,5 +207,8 @@
   <!-- Supabase init you already use -->
   <script src="app.js"></script>
   <script src="account.js"></script>
+  <!-- ⚠️ script order matters -->
+<script src="app.js?v=2"></script>
+<script src="account.js?v=2"></script>
 </body>
 </html>
