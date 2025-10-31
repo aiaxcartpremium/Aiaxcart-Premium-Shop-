@@ -1,126 +1,107 @@
 <!doctype html>
 <html lang="en">
 <head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta charset="utf-8">
   <title>Aiaxcart Premium Shop</title>
-  <link rel="stylesheet" href="style.css" />
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <link href="style.css" rel="stylesheet">
+  <script src="app.js"></script>
 </head>
 <body>
-  <!-- ===== HEADER / NAV ===== -->
-<header class="row" style="align-items:center; gap:16px;">
-  <h1 style="margin:0; flex:1">Aiaxcart Premium Shop</h1>
-
-  <!-- tabs (optional, keep yours if you want) -->
-  <nav id="topTabs" class="row" style="gap:20px">
-    <a href="#" class="active" data-tab="categories">Accounts Available</a>
-    <a href="#" data-tab="payments">Mode of Payment</a>
-    <a href="#" data-tab="rules">Rules</a>
-    <a href="#" data-tab="feedback">Feedback</a>
-    <a href="#" data-tab="about">About</a>
-  </nav>
-
-  <!-- right action buttons -->
-  <div class="row" style="gap:12px; margin-left:auto">
-    <a href="admin.html" class="btn ghost">Admin</a>
-    <button id="openAuth" class="btn">Login / Sign up</button>
-    <a href="account.html" class="btn ghost">My Account</a>
-  </div>
-</header>
-
-<!-- ===== AUTH MODAL (on storefront) ===== -->
-<div id="authModal" class="modal hidden" aria-hidden="true">
-  <div class="modal-box" style="max-width:680px">
-    <div class="row" style="justify-content:space-between;align-items:center">
-      <h3 style="margin:0">Sign in</h3>
-      <button id="closeAuth" class="btn ghost">Close</button>
-    </div>
-
-    <div class="row" style="gap:16px; margin-top:16px">
-      <div style="flex:1">
-        <label>Email</label>
-        <input id="authEmail" type="email" placeholder="you@email.com" />
-      </div>
-      <div style="flex:1">
-        <label>Password</label>
-        <input id="authPass" type="password" placeholder="••••••••" />
-      </div>
-    </div>
-
-    <div class="row" style="gap:12px; margin-top:16px">
-      <button id="doLogin"  class="btn">Sign in</button>
-      <button id="doSignup" class="btn ghost">Create account</button>
-      <div id="authMsg" class="warn" style="margin-left:auto"></div>
-    </div>
-  </div>
-</div>
-
+  <header class="container header">
+    <div class="brand">Aiaxcart Premium Shop</div>
+    <nav class="nav">
+      <a class="btn ghost" href="admin.html">Admin</a>
+      <a class="btn" href="auth.html" id="loginLink">Login / Sign up</a>
+      <a class="btn ghost" href="account.html">My Account</a>
+    </nav>
+  </header>
 
   <main class="container">
-    <section id="categories" class="tab">
-      <div class="section-head">
-        <h2>Premium Accounts</h2>
-        <div id="catChips"></div>
-      </div>
-      <div id="grid" class="grid"></div>
-    </section>
-
-    <section id="payments" class="tab hidden">
-      <h2>Accepted Payments</h2>
-      <ul class="list">
-        <li><b>GCash</b> — send exact amount then include ref. # on checkout</li>
-        <li><b>Maya</b> — supported; include ref. # on checkout</li>
-        <li><b>Bank Transfer</b> — MariBank (send receipt)</li>
-      </ul>
-    </section>
-
-    <section id="rules" class="tab hidden">
-      <h2>Rules</h2>
-      <ol class="list">
-        <li>Orders are processed after a valid reference number or receipt is submitted.</li>
-        <li>No refunds for digital items once delivered.</li>
-        <li>Use a correct, reachable email address.</li>
-        <li>Message us for any concerns via Telegram or Messenger.</li>
-      </ol>
-    </section>
-
-    <section id="feedback" class="tab hidden">
-      <h2>Feedback / Vouches</h2>
-      <textarea id="feedbackText" class="input" placeholder="Write your feedback here…"></textarea>
-      <button class="btn" id="sendFeedback">Send Feedback</button>
-      <div id="feedbackList" class="stack" style="margin-top:16px;"></div>
-    </section>
-
+    <h1>Premium Accounts</h1>
+    <div class="pills" id="catPills"></div>
+    <div id="catSections"></div>
   </main>
 
-  <footer>© 2025 Aiaxcart Premium Shop</footer>
-
-  <!-- Checkout modal -->
-  <dialog id="checkout">
-    <form method="dialog" class="modal">
-      <button value="close" class="close">×</button>
-      <h3 id="ckTitle">Checkout</h3>
-      <p id="ckSubtitle" class="muted"></p>
-
-      <label class="label">Name</label>
-      <input id="ckName" class="input" required />
-      <label class="label">Email</label>
-      <input id="ckEmail" class="input" type="email" required />
-      <label class="label">Reference number (or upload receipt)</label>
-      <input id="ckRef" class="input" placeholder="e.g., GCash REF123456789" />
-      <input id="ckFile" class="input" type="file" accept="image/*,application/pdf" />
-      <div class="hstack right">
-        <button class="btn" id="placeBtn" type="button">Place Order</button>
+  <!-- Checkout Modal -->
+  <div class="modalScrim" id="ckModal">
+    <div class="modal">
+      <div class="flex">
+        <h3 id="ckTitle">Checkout</h3>
+        <button class="btn ghost small" id="ckClose">Close</button>
       </div>
-      <p id="ckMsg" class="muted"></p>
-    </form>
-  </dialog>
+      <div class="divider"></div>
 
-  <link rel="stylesheet" href="./style.css" />
-  <script type="module" src="./app.js" defer></script>
-  <script type="module" src="./shop.js" defer></script>
-  <script src="app.js?v=2"></script>
-<script src="account.js?v=2"></script>
+      <div class="row" style="gap:14px">
+        <div style="flex:1">
+          <label>Ownership</label>
+          <select id="ownSel">
+            <option value="solo">Solo</option>
+            <option value="shared">Shared</option>
+          </select>
+        </div>
+        <div style="flex:1">
+          <label>Type</label>
+          <select id="credSel">
+            <option value="account">Account</option>
+            <option value="profile">Profile</option>
+          </select>
+        </div>
+        <div style="flex:1">
+          <label>Duration</label>
+          <select id="durSel">
+            <option value="7">7 days</option>
+            <option value="14">14 days</option>
+            <option value="30" selected>1 month</option>
+            <option value="60">2 months</option>
+            <option value="90">3 months</option>
+            <option value="180">6 months</option>
+            <option value="365">12 months</option>
+          </select>
+        </div>
+      </div>
 
+      <div class="divider"></div>
+
+      <div class="row">
+        <label>Payment method</label>
+        <div class="row" style="gap:16px;margin-left:10px">
+          <label><input type="radio" name="pm" value="gcash" checked> GCash</label>
+          <label><input type="radio" name="pm" value="maya"> Maya</label>
+        </div>
+      </div>
+      <div id="gcashInfo" class="row" style="gap:10px;margin:8px 0">
+        <span class="badge">GCash</span> <span class="muted">Send to: <b id="gcashNum">09XX-XXX-XXXX</b></span>
+      </div>
+      <div id="mayaInfo" class="row hidden" style="gap:10px;margin:8px 0">
+        <span class="badge">Maya</span> <span class="muted">Send to: <b id="mayaNum">09YY-YYY-YYYY</b></span>
+      </div>
+
+      <div class="row" style="gap:14px">
+        <div style="flex:1">
+          <label>Payment Ref # (optional)</label>
+          <input id="refNo" placeholder="1234567890">
+        </div>
+        <div style="flex:1">
+          <label>Time sent (optional)</label>
+          <input id="sentAt" type="datetime-local">
+        </div>
+      </div>
+
+      <div>
+        <label>Upload receipt (optional)</label>
+        <input id="receiptFile" type="file" accept="image/*,application/pdf">
+      </div>
+
+      <div class="divider"></div>
+      <div class="flex">
+        <div class="price" id="amountTxt">₱0.00</div>
+        <button class="btn" id="placeBtn">Place order</button>
+      </div>
+      <p id="msg" class="muted"></p>
+    </div>
+  </div>
+
+  <script src="shop.js" defer></script>
 </body>
 </html>
