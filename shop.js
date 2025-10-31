@@ -1,79 +1,90 @@
+/* global supabase */
+
 import { supabase } from './app.js';
 
-/* ---------- Tabs ---------- */
-const tabs = document.querySelectorAll('#topTabs a');
-const sections = document.querySelectorAll('.tab');
-tabs.forEach(t => t.addEventListener('click', e=>{
-  e.preventDefault();
-  tabs.forEach(x=>x.classList.remove('active'));
-  t.classList.add('active');
-  sections.forEach(s=>s.classList.toggle('hidden', s.id !== t.dataset.tab));
-}));
+// ====== AUTH modal controls on storefront ======
+(function authModalWiring(){
+  const open = document.getElementById('openAuth');
+  const close = document.getElementById('closeAuth');
+  const modal = document.getElementById('authModal');
+  const email = document.getElementById('authEmail');
+  const pass  = document.getElementById('authPass');
+  const msg   = document.getElementById('authMsg');
 
-/* ---------- DOM ---------- */
-const catChips = document.getElementById('catChips');
-const grid = document.getElementById('grid');
-const onhandList = document.getElementById('onhandList');
-const dlg = document.getElementById('checkout');
+  if(!open || !modal) return;
 
-let CATS=[], PRODS=[];
+  open.onclick  = ()=> { modal.classList.remove('hidden'); modal.setAttribute('aria-hidden','false'); };
+  close.onclick = ()=> { modal.classList.add('hidden');    modal.setAttribute('aria-hidden','true');  };
 
-await bootstrap();
-
-async function bootstrap(){
-  await loadCats();
-  await loadProducts();
-  await loadOnhand();
-  await loadFeedbacks();
-}
-
-async function loadCats(){
-  const { data } = await supabase.from('categories').select('*').order('sort');
-  CATS = data || [];
-  renderCatChips();
-}
-function renderCatChips(){
-  catChips.innerHTML='';
-  catChips.appendChild(chip('All', true, ()=>renderProducts()));
-  CATS.forEach(c => {
-    catChips.appendChild(chip(c.name,false,()=>renderProducts(c.id)));
-  });
-}
-function chip(label, active, onClick){
-  const el = document.createElement('button');
-  el.className='chip'+(active?' active':'');
-  el.textContent = label;
-  el.onclick = ()=>{
-    [...catChips.children].forEach(n=>n.classList.remove('active'));
-    el.classList.add('active');
-    onClick();
+  document.getElementById('doLogin').onclick = async ()=>{
+    msg.textContent = '';
+    const { error } = await supabase.auth.signInWithPassword({
+      email: email.value.trim(), password: pass.value
+    });
+    if(error){ msg.textContent = error.message; return; }
+    // stay on page; user can now go to My Account
+    modal.classList.add('hidden');
   };
-  return el;
-}
 
-async function loadProducts(){
-  const { data } = await supabase.from('products')
-    .select('*').eq('available', true)
-    .order('created_at',{ascending:false});
-  PRODS = data || [];
-  renderProducts();
-}
+  document.getElementById('doSignup').onclick = async ()=>{
+    msg.textContent = '';
+    const { error } = await supabase.auth.signUp({
+      email: email.value.trim(), password: pass.value
+    });
+    if(error){ msg.textContent = error.message; return; }
+    msg.textContent = 'Account created. Please sign in.';
+  };
+})();
 
-function renderProducts(catId){
-  const list = catId ? PRODS.filter(x=>x.category_id===catId) : PRODS;
-  grid.innerHTML = list.length ? list.map(p=>`
+// ====== PRODUCTS RENDERING ======
+let products = []; // keep
+const grid = document.getElementById('cards'); // your products container
+
+export async function loadProductsForStore(){
+  const { data, error } = await supabase
+    .from('products')
+    .select('id,name,price,available')
+    .eq('available', true)
+    .order('name');
+
+  if(error){ console.error(error); return; }
+  products = data || [];
+
+  // Render cards (use your existing card template if you like)
+  grid.innerHTML = products.map(p => `
     <div class="card">
-      <h3>${p.name}</h3>
-      <p class="muted">${p.description||''}</p>
-      <p><b>₱${Number(p.price).toFixed(2)}</b></p>
-      <button class="btn" data-id="${p.id}">Order</button>
+      <h3>${escapeHtml(p.name)}</h3>
+      <div class="muted">₱${Number(p.price||0).toFixed(2)}</div>
+      <button class="btn order-btn" data-id="${p.id}">Order</button>
     </div>
-  `).join('') : '<p class="muted">No products found.</p>';
-
-  grid.querySelectorAll('[data-id]').forEach(b=>{
-    b.onclick = ()=>openCheckout(b.dataset.id);
-  });
+  `).join('');
 }
+
+// ====== ORDER BUTTON HANDLER (event delegation) ======
+grid?.addEventListener('click', (e)=>{
+  const btn = e.target.closest('.order-btn');
+  if(!btn) return;
+  const id = btn.dataset.id;
+  openCheckout(id);
+});
+
+// ====== OPEN CHECKOUT WITH YOUR EXISTING FLOW ======
+function openCheckout(productId){
+  // preload product in your existing checkout panel / modal
+  const sel = document.getElementById('pSel');
+  if(sel){
+    sel.value = productId;
+    sel.dispatchEvent(new Event('change'));
+  }
+  // show the checkout panel/modal you already have
+  document.getElementById('checkoutPanel')?.classList.remove('hidden');
+}
+
+function escapeHtml(s){return String(s??'').replace(/[&<>"']/g,c=>({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));}
+
+// kick it
+loadProductsForStore();
+
 
 /* ---------- On-hand (public view) ---------- */
 async function loadOnhand(){
