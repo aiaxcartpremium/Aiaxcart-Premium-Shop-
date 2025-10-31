@@ -83,6 +83,36 @@ supabase.auth.onAuthStateChange(async (_evt, sess)=>{
     showAuth(false);
   }
 });
+// sign up handler
+signupForm.addEventListener('submit', async (e) => {
+  e.preventDefault();
+  const name = document.getElementById('su_name').value.trim();
+  const email = document.getElementById('su_email').value.trim();
+  const password = document.getElementById('su_password').value;
+
+  const { data, error } = await supabase.auth.signUp({
+    email,
+    password,
+    options: {
+      data: { display_name: name }   // custom user metadata
+    }
+  });
+
+  if (error) {
+    showMsg(error.message, 'error');
+    return;
+  }
+
+  // If “Confirm email” is OFF, Supabase returns a session here
+  if (data.session) {
+    showMsg('Welcome! You’re now signed in.', 'success');
+    await loadAccountUI();          // refresh UI for logged-in user
+  } else {
+    // Fallback when confirmation is ON (kept for safety)
+    showMsg('Account created. Please check your email to confirm.', 'info');
+  }
+});
+
 
 // ---------- actions ----------
 suBtn.onclick = async ()=>{
