@@ -1,186 +1,264 @@
-/* global supabase, $id */
+/* global supabase */
 
-// Small helpers
-const msg = (el, t)=> (el.textContent=t);
+// QUICK allow-list. Add your admin emails here:
+const ADMIN_EMAILS = [
+  'shanaiamau99@gmail.com'
+];
 
-// State
-let currentUser = null;
+const loginGate = document.getElementById('loginGate');
+const consoleBox = document.getElementById('console');
 
-// Gate
-document.addEventListener('DOMContentLoaded', async ()=>{
-  await requireAdminSession().then(ok=>{ if(ok) initAdmin(); });
-  $id('loginBtn').onclick = doLogin;
-  $id('logoutBtn').onclick = async ()=>{ await supabase.auth.signOut(); location.reload(); };
-});
+const adEmail = document.getElementById('adEmail');
+const adPass  = document.getElementById('adPass');
+const adLogin = document.getElementById('adLogin');
+const adLogout= document.getElementById('adLogout');
+const adMsg   = document.getElementById('adMsg');
 
-async function doLogin(){
-  const { error } = await supabase.auth.signInWithPassword({
-    email: $id('email').value.trim(),
-    password: $id('password').value
-  });
-  if(error){ msg($id('authMsg'), error.message); return; }
-  const ok = await requireAdminSession(); if(ok) initAdmin();
-}
+const pName = document.getElementById('pName');
+const pCat  = document.getElementById('pCat');
+const pPrice= document.getElementById('pPrice');
+const pAvail= document.getElementById('pAvail');
+const addProd = document.getElementById('addProd');
+const prodList= document.getElementById('prodList');
 
-async function requireAdminSession(){
-  const { data: { session } } = await supabase.auth.getSession();
-  if(!session){ $id('authBox').classList.remove('hidden'); $id('adminArea').classList.add('hidden'); return false; }
-  currentUser = session.user;
+const invProd = document.getElementById('invProd');
+const invUser = document.getElementById('invUser');
+const invSecret = document.getElementById('invSecret');
+const invOwn = document.getElementById('invOwn');
+const invCred = document.getElementById('invCred');
+const invDays = document.getElementById('invDays');
+const invNotes = document.getElementById('invNotes');
+const addInv = document.getElementById('addInv');
+const invList = document.getElementById('invList');
 
-  // verify role
-  const { data, error } = await supabase.from('user_roles')
-    .select('role').eq('user_id', currentUser.id).single();
-  if(error || !data || data.role!=='admin'){
-    await supabase.auth.signOut();
-    msg($id('authMsg'), 'Your account is not authorized as admin.');
-    $id('authBox').classList.remove('hidden');
-    $id('adminArea').classList.add('hidden');
-    return false;
+const ordersBox = document.getElementById('ordersBox');
+
+let me = null;
+let products = [];
+
+init();
+
+async function init(){
+  const { data } = await supabase.auth.getSession();
+  me = data.session?.user ?? null;
+
+  if(!me){
+    // show login form
+    loginGate.style.display = '';
+    adLogin.onclick = doAdminLogin;
+    return;
   }
-  $id('authBox').classList.add('hidden'); $id('adminArea').classList.remove('hidden');
-  return true;
+  // already logged in — check role
+  if(!isAdmin(me.email)){
+    showNotAdmin();
+    return;
+  }
+  bootstrapConsole();
 }
 
-async function initAdmin(){
-  await Promise.all([loadProducts(), loadOnhand(), loadOrders(), loadStats()]);
-  $id('pSave').onclick   = guarded(saveProduct);
-  $id('addInv').onclick  = guarded(addOnhand);
-  $id('csvBtn').onclick  = guarded(exportCSV);
+function isAdmin(email){
+  return ADMIN_EMAILS.map(s=>s.toLowerCase().trim()).includes((email||'').toLowerCase().trim());
 }
 
-function guarded(fn){ return async (...a)=>{ if(await requireAdminSession()) fn(...a); }; }
+async function doAdminLogin(){
+  adMsg.textContent = '';
+  const { data, error } = await supabase.auth.signInWithPassword({
+    email: adEmail.value.trim(),
+    password: adPass.value
+  });
+  if(error){ adMsg.textContent = error.message; return; }
+  me = data.user;
+  if(!isAdmin(me.email)){
+    adMsg.textContent = 'Your account is not authorized as admin.';
+    await supabase.auth.signOut();
+    return;
+  }
+  bootstrapConsole();
+}
 
-/* ========== PRODUCTS ========== */
+function showNotAdmin(){
+  loginGate.style.display = '';
+  adMsg.textContent = 'Your account is not authorized as admin.';
+}
+
+function bootstrapConsole(){
+  loginGate.style.display = 'none';
+  consoleBox.style.display = '';
+  adLogout.onclick = async ()=>{ await supabase.auth.signOut(); location.href='index.html'; };
+  wireActions();
+  refreshAll();
+}
+
+function wireActions(){
+  addProd.onclick = upsertProduct;
+  addInv.onclick = addInventory;
+}
+
+async function refreshAll(){
+  await loadProducts();
+  await loadInventory();
+  await loadOrders();
+}
+
+// ----- PRODUCTS -----
 async function loadProducts(){
-  // categories dropdowns
-  const { data: prods } = await supabase.from('products').select('id,name,category,price,available,available_stock,description').order('created_at',{ascending:false});
-  const catSel = $id('invProd'); catSel.innerHTML = '';
-  prods?.forEach(p=>{
-    const o = document.createElement('option');
-    o.value=p.id; o.textContent=`${p.category} — ${p.name}`; catSel.appendChild(o);
+  const { data, error } = await supabase
+    .from('products')
+    .select('id,name,category,price,available')
+    .order('name');
+
+  if(error){ prodList.innerHTML = `<p class="warn">${error.message}</p>`; return; }
+  products = data || [];
+
+  // fill select
+  invProd.innerHTML = '';
+  products.forEach(p=>{
+    const opt = document.createElement('option');
+    opt.value = p.id;
+    opt.textContent = p.name;
+    invProd.appendChild(opt);
   });
 
-  const list = $id('prodList'); list.innerHTML = '';
-  (prods||[]).forEach(p=>{
-    const div = document.createElement('div');
-    div.className='card';
-    div.innerHTML = `
-      <div class="flex"><b>${p.name}</b> <span class="muted">${p.category}</span></div>
-      <div class="muted">₱${Number(p.price).toFixed(2)} / mo • Stock: ${p.available_stock||0} • ${p.available?'Available':'Hidden'}</div>
-      <div class="row" style="margin-top:6px">
-        <button class="btn ghost small edit">Edit</button>
-        <button class="btn ghost small toggle">${p.available?'Hide':'Show'}</button>
-      </div>`;
-    div.querySelector('.edit').onclick = ()=>{
-      $id('pCat').value = p.category; $id('pName').value=p.name; $id('pPrice').value=p.price;
-      $id('pDesc').value=p.description||''; $id('pAvail').checked=!!p.available; $id('pStock').value=p.available_stock||0;
-      $id('pSave').dataset.editId = p.id;
-    };
-    div.querySelector('.toggle').onclick = guarded(async ()=>{
-      await supabase.from('products').update({available:!p.available}).eq('id', p.id); loadProducts();
-    });
-    list.appendChild(div);
+  // list
+  prodList.innerHTML = '';
+  products.forEach(p=>{
+    const item = document.createElement('div');
+    item.className = 'row';
+    item.style.justifyContent = 'space-between';
+    item.innerHTML = `
+      <div>
+        <b>${escapeHtml(p.name)}</b>
+        <span class="muted">${escapeHtml(p.category||'')}</span>
+        <span class="muted">₱${Number(p.price||0).toFixed(2)}/mo</span>
+        ${p.available ? '<span class="chip">Available</span>' : '<span class="chip">Hidden</span>'}
+      </div>
+      <button class="btn ghost" data-id="${p.id}">Edit</button>
+    `;
+    item.querySelector('button').onclick = ()=>fillProduct(p);
+    prodList.appendChild(item);
   });
 }
 
-async function saveProduct(){
-  const body = {
-    category: $id('pCat').value,
-    name: $id('pName').value.trim(),
-    price: Number($id('pPrice').value||0),
-    description: $id('pDesc').value||null,
-    available: $id('pAvail').checked,
-    available_stock: Number($id('pStock').value||0)
+function fillProduct(p){
+  pName.value = p.name || '';
+  pCat.value  = p.category || '';
+  pPrice.value= p.price ?? '';
+  pAvail.checked = !!p.available;
+  // keep current product id on the button dataset
+  addProd.dataset.editId = p.id;
+}
+
+async function upsertProduct(){
+  const name = pName.value.trim();
+  if(!name){ alert('Name required'); return; }
+
+  const payload = {
+    name,
+    category: pCat.value.trim() || null,
+    price: Number(pPrice.value||0),
+    available: !!pAvail.checked
   };
-  const id = $id('pSave').dataset.editId;
-  if(id) await supabase.from('products').update(body).eq('id', id);
-  else   await supabase.from('products').insert(body);
-  delete $id('pSave').dataset.editId;
-  [$id('pName'),$id('pPrice'),$id('pDesc'),$id('pStock')].forEach(i=>i.value=''); $id('pAvail').checked=true;
+
+  let q = supabase.from('products');
+  const id = addProd.dataset.editId;
+  if(id){
+    const { error } = await q.update(payload).eq('id', id);
+    if(error){ alert(error.message); return; }
+    addProd.dataset.editId = '';
+  }else{
+    const { error } = await q.insert(payload);
+    if(error){ alert(error.message); return; }
+  }
+  pName.value = pCat.value = pPrice.value = '';
+  pAvail.checked = true;
   await loadProducts();
 }
 
-/* ========== ON-HAND ========== */
-async function addOnhand(){
-  const body = {
-    product_id: $id('invProd').value,
-    username:   $id('invUser').value,
-    secret:     $id('invSecret').value,
-    notes:      $id('invNotes').value || null,
-    ownership_kind: $id('invOwn').value,
-    cred_kind:  $id('invCred').value,
-    duration_days: parseInt($id('invDur').value,10)
+// ----- INVENTORY -----
+async function loadInventory(){
+  const { data, error } = await supabase
+    .from('onhand_accounts')
+    .select('id, product_id, username, ownership_kind, cred_kind, duration_days, assigned')
+    .order('created_at', { ascending:false })
+    .limit(50);
+
+  if(error){ invList.innerHTML = `<p class="warn">${error.message}</p>`; return; }
+  const byId = Object.fromEntries(products.map(p=>[p.id,p]));
+  invList.innerHTML = '';
+  (data||[]).forEach(r=>{
+    const div = document.createElement('div');
+    div.className = 'row';
+    div.style.justifyContent = 'space-between';
+    const prod = byId[r.product_id];
+    div.innerHTML = `
+      <div>
+        <b>${escapeHtml(prod?.name || 'Unknown')}</b>
+        <span class="muted">${escapeHtml(r.username||'')}</span>
+        <span class="muted">${escapeHtml(r.ownership_kind||'')} • ${escapeHtml(r.cred_kind||'')} • ${r.duration_days||0}d</span>
+        ${r.assigned ? '<span class="chip">Assigned</span>' : '<span class="chip">Available</span>'}
+      </div>
+      <button class="btn ghost" data-id="${r.id}">Delete</button>
+    `;
+    div.querySelector('button').onclick = ()=>deleteInventory(r.id);
+    invList.appendChild(div);
+  });
+}
+
+async function addInventory(){
+  const payload = {
+    product_id: invProd.value,
+    username: invUser.value.trim(),
+    secret: invSecret.value.trim(),
+    ownership_kind: invOwn.value,
+    cred_kind: invCred.value,
+    duration_days: parseInt(invDays.value,10)||30,
+    notes: invNotes.value.trim() || null,
+    assigned: false
   };
-  await supabase.from('onhand_accounts').insert(body);
-  await supabase.rpc('increment_stock', { p_product_id: body.product_id });
-  [$id('invUser'),$id('invSecret'),$id('invNotes')].forEach(i=>i.value='');
-  await loadOnhand(); await loadProducts();
+  if(!payload.product_id || !payload.username || !payload.secret){
+    alert('Product, username and password/token are required.');
+    return;
+  }
+  const { error } = await supabase.from('onhand_accounts').insert(payload);
+  if(error){ alert(error.message); return; }
+  invUser.value = invSecret.value = invNotes.value = '';
+  await loadInventory();
 }
 
-async function loadOnhand(){
-  const { data, error } = await supabase.from('onhand_accounts')
-    .select('id, products(name), username, assigned, assigned_at, ownership_kind, cred_kind, duration_days')
-    .order('assigned, created_at');
-  const list = $id('invList'); if(error){ list.textContent=error.message; return; }
-  list.innerHTML = '';
-  (data||[]).forEach(a=>{
-    const d = document.createElement('div');
-    d.className='card';
-    d.innerHTML = `<b>${a.products?.name||''}</b> • ${a.username}
-      <div class="muted">${a.assigned?'Assigned':'Available'} ${a.assigned_at?('• '+new Date(a.assigned_at).toLocaleString()):''}
-      • ${a.ownership_kind}/${a.cred_kind} • ${a.duration_days}d</div>`;
-    list.appendChild(d);
-  });
+async function deleteInventory(id){
+  const { error } = await supabase.from('onhand_accounts').delete().eq('id', id);
+  if(error){ alert(error.message); return; }
+  await loadInventory();
 }
 
-/* ========== ORDERS ========== */
+// ----- ORDERS -----
 async function loadOrders(){
-  const { data, error } = await supabase.from('orders').select('*').order('created_at',{ascending:false});
-  const box = $id('orderList'); if(error){ box.textContent=error.message; return; }
-  box.innerHTML='';
+  const { data, error } = await supabase
+    .from('orders')
+    .select('id,created_at,product_name,status,price,customer_email,payment_method,payment_ref,delivered_at')
+    .order('created_at', { ascending:false })
+    .limit(100);
+
+  if(error){ ordersBox.innerHTML = `<p class="warn">${error.message}</p>`; return; }
+
+  ordersBox.innerHTML = '';
   (data||[]).forEach(o=>{
-    const d = document.createElement('div');
-    d.className='card';
-    d.innerHTML = `
-      <div class="flex"><b>${o.product_name}</b><span class="chip">${o.status}</span></div>
-      <div class="muted">Order ${o.id} • ${o.customer_email||''}</div>
-      <div class="muted">₱${Number(o.price||0).toFixed(2)} • ${o.payment_method||''} ${o.payment_ref?('• Ref '+o.payment_ref):''}</div>
-      ${o.receipt_url?`<div><a href="${o.receipt_url}" target="_blank" class="btn ghost small">View receipt</a></div>`:''}
-      <div class="row" style="margin-top:8px">
-        <select class="stSel">
-          ${['pending','paid','completed','cancelled'].map(s=>`<option ${s===o.status?'selected':''}>${s}</option>`).join('')}
-        </select>
-        <button class="btn ghost small save">Save</button>
-        <button class="btn small drop">Confirm Paid & Auto-Drop</button>
-      </div>`;
-    d.querySelector('.save').onclick = async ()=>{
-      const st = d.querySelector('.stSel').value;
-      await supabase.from('orders').update({status:st}).eq('id', o.id);
-      loadOrders(); loadStats();
-    };
-    d.querySelector('.drop').onclick = async ()=>{
-      await supabase.from('orders').update({status:'paid'}).eq('id', o.id);
-      const { error } = await supabase.rpc('fulfill_order', { p_order_id: o.id });
-      if(error) alert(error.message);
-      await loadOnhand(); await loadProducts(); await loadOrders(); await loadStats();
-    };
-    box.appendChild(d);
+    const div = document.createElement('div');
+    div.className = 'row';
+    div.style.justifyContent = 'space-between';
+    div.innerHTML = `
+      <div>
+        <b>${escapeHtml(o.product_name)}</b> <span class="chip">${o.status}</span>
+        <div class="muted">${escapeHtml(o.customer_email||'')}</div>
+        <div class="muted">Payment: ${escapeHtml(o.payment_method||'')} ${o.payment_ref?('• Ref: '+escapeHtml(o.payment_ref)) : ''}</div>
+        <div class="muted">${new Date(o.created_at).toLocaleString()}</div>
+      </div>
+      <div class="price">₱${Number(o.price||0).toFixed(2)}</div>
+    `;
+    ordersBox.appendChild(div);
   });
 }
 
-async function loadStats(){
-  const { data } = await supabase.from('orders')
-    .select('product_name,status').in('status',['paid','completed']);
-  const counts = {}; data?.forEach(o=>counts[o.product_name]=(counts[o.product_name]||0)+1);
-  $id('stats').innerHTML = Object.entries(counts).map(([k,v])=>`<div class="card row"><b>${k}</b><span class="muted">${v} sold</span></div>`).join('') || '<p class="muted">No sales yet.</p>';
-}
-
-async function exportCSV(){
-  const { data, error } = await supabase.from('orders').select('*');
-  if(error) return alert(error.message);
-  if(!data.length) return alert('No orders.');
-  const headers=Object.keys(data[0]); const rows=[headers.join(',')];
-  data.forEach(r=>rows.push(headers.map(h=>`"${(r[h]??'').toString().replace(/"/g,'""')}"`).join(',')));
-  const blob=new Blob([rows.join('\n')],{type:'text/csv'}), url=URL.createObjectURL(blob);
-  const a=document.createElement('a'); a.href=url; a.download='orders.csv'; a.click(); URL.revokeObjectURL(url);
+function escapeHtml(s){
+  return String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 }
