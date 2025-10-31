@@ -9,7 +9,18 @@
   --bg:#fdfbfb;
   --card:#fff;
   --border:#eee;
+}.btn.ghost {
+  background: #e8dada;
+  color: #6b4f4f;
+  padding: 8px 14px;
+  border-radius: 8px;
+  text-decoration: none;
+  margin-left: 6px;
 }
+.btn.ghost:hover {
+  opacity: 0.9;
+}
+
 
 *{ box-sizing:border-box; }
 body{ margin:0; font-family: Inter, system-ui, -apple-system, Segoe UI, Roboto, sans-serif; color:var(--ink); background:var(--bg); }
