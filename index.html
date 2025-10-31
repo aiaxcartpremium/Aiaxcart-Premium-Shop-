@@ -7,19 +7,53 @@
   <link rel="stylesheet" href="style.css" />
 </head>
 <body>
-  <header>
-  <h1>Aiaxcart Premium Shop</h1>
-  <nav id="topTabs">
+  <!-- ===== HEADER / NAV ===== -->
+<header class="row" style="align-items:center; gap:16px;">
+  <h1 style="margin:0; flex:1">Aiaxcart Premium Shop</h1>
+
+  <!-- tabs (optional, keep yours if you want) -->
+  <nav id="topTabs" class="row" style="gap:20px">
     <a href="#" class="active" data-tab="categories">Accounts Available</a>
     <a href="#" data-tab="payments">Mode of Payment</a>
     <a href="#" data-tab="rules">Rules</a>
     <a href="#" data-tab="feedback">Feedback</a>
-    <a href="#" data-tab="onhand">About</a>
+    <a href="#" data-tab="about">About</a>
   </nav>
 
-  <a href="admin.html" class="btn ghost">Admin</a>
-  <a href="account.html" class="btn ghost">My Account</a>
+  <!-- right action buttons -->
+  <div class="row" style="gap:12px; margin-left:auto">
+    <a href="admin.html" class="btn ghost">Admin</a>
+    <button id="openAuth" class="btn">Login / Sign up</button>
+    <a href="account.html" class="btn ghost">My Account</a>
+  </div>
 </header>
+
+<!-- ===== AUTH MODAL (on storefront) ===== -->
+<div id="authModal" class="modal hidden" aria-hidden="true">
+  <div class="modal-box" style="max-width:680px">
+    <div class="row" style="justify-content:space-between;align-items:center">
+      <h3 style="margin:0">Sign in</h3>
+      <button id="closeAuth" class="btn ghost">Close</button>
+    </div>
+
+    <div class="row" style="gap:16px; margin-top:16px">
+      <div style="flex:1">
+        <label>Email</label>
+        <input id="authEmail" type="email" placeholder="you@email.com" />
+      </div>
+      <div style="flex:1">
+        <label>Password</label>
+        <input id="authPass" type="password" placeholder="••••••••" />
+      </div>
+    </div>
+
+    <div class="row" style="gap:12px; margin-top:16px">
+      <button id="doLogin"  class="btn">Sign in</button>
+      <button id="doSignup" class="btn ghost">Create account</button>
+      <div id="authMsg" class="warn" style="margin-left:auto"></div>
+    </div>
+  </div>
+</div>
 
 
   <main class="container">
