@@ -1,353 +1,437 @@
-console.log('Admin.js loaded');
-// admin.js - full updated admin panel client logic
+// admin.js
+// Aiaxcart Premium Shop — Admin panel logic
+// Requires: <script type="module" src="app.js"> that exports { supabase }
+
 import { supabase } from './app.js';
 
+/* -------------------------- DOM references -------------------------- */
 const authBox   = document.getElementById('authBox');
 const adminArea = document.getElementById('adminArea');
 const authMsg   = document.getElementById('authMsg');
 
+const emailEl   = document.getElementById('email');
+const passEl    = document.getElementById('password');
+const loginBtn  = document.getElementById('loginBtn');
+const logoutBtn = document.getElementById('logoutBtn');
+
+// Products form
+const prodForm  = document.getElementById('prodForm');
+const pCat      = document.getElementById('pCat');      // <select> Category
+const pName     = document.getElementById('pName');     // name
+const pPrice    = document.getElementById('pPrice');    // price
+const pDesc     = document.getElementById('pDesc');     // description
+const pAvail    = document.getElementById('pAvail');    // checkbox Available
+const pStock    = document.getElementById('pStock');    // available stock (on-hand)
+
+// On-hand accounts form
+const invForm   = document.getElementById('invForm');
+const invProd   = document.getElementById('invProd');   // <select> product
+const invUser   = document.getElementById('invUser');   // username/email/code
+const invSecret = document.getElementById('invSecret'); // password/token
+const invNotes  = document.getElementById('invNotes');  // notes (optional)
+
+// NEW selects you asked for (please make sure they exist in admin.html)
+const invProfile = document.getElementById('invProfile');   // Solo/Shared (profile/account)
+const invDuration= document.getElementById('invDuration');  // 7d, 14d, 1–12 months
+
+// Optional sections
+const prodList  = document.getElementById('prodList');
+const invList   = document.getElementById('invList');
+const orderList = document.getElementById('orderList');
+const statsBox  = document.getElementById('stats');
+const csvBtn    = document.getElementById('csvBtn');
+
+/* ------------------------------- State ------------------------------ */
 let currentUser = null;
 let isAdmin     = false;
 
-// ---------- Helpers ----------
-function showAdmin(show){
-  if(show){ authBox?.classList.add('hidden'); adminArea?.classList.remove('hidden'); }
-  else    { adminArea?.classList.add('hidden'); authBox?.classList.remove('hidden'); }
+/* --------------------------- Helpers/UX ----------------------------- */
+function showAdmin(show) {
+  if (show) { authBox?.classList.add('hidden'); adminArea?.classList.remove('hidden'); }
+  else      { adminArea?.classList.add('hidden'); authBox?.classList.remove('hidden'); }
 }
 
-async function requireAdminSession(){
+function niceMoney(n) {
+  const v = Number(n ?? 0);
+  return isFinite(v) ? `₱${v.toFixed(2)}` : '₱0.00';
+}
+
+function toDateStr(dt) {
+  return new Date(dt).toLocaleString();
+}
+
+function daysFromNow(n) {
+  const d = new Date();
+  d.setDate(d.getDate() + n);
+  return d.toISOString();
+}
+
+/* Duration map: label -> days */
+const DURATION_CHOICES = [
+  ['7 days', 7], ['14 days', 14],
+  ['1 month', 30], ['2 months', 60], ['3 months', 90], ['4 months', 120],
+  ['5 months', 150], ['6 months', 180], ['7 months', 210], ['8 months', 240],
+  ['9 months', 270], ['10 months', 300], ['11 months', 330], ['12 months', 360],
+];
+
+/* Profile types */
+const PROFILE_TYPES = [
+  'Solo profile', 'Shared profile', 'Solo account', 'Shared account'
+];
+
+/* Categories to display in category <select> (safe defaults) */
+const DEFAULT_CATEGORIES = ['Entertainment','Streaming','Educational','Editing','AI'];
+
+/* ------------------------- Auth: Admin gate ------------------------- */
+async function requireAdminSession() {
+  // 1) Session
   const { data: { session } } = await supabase.auth.getSession();
-  if(!session){ currentUser=null; isAdmin=false; showAdmin(false); return false; }
+  if (!session) { currentUser = null; isAdmin = false; showAdmin(false); return false; }
+
   currentUser = session.user;
 
-  // verify admin role server-side by reading user_roles
+  // 2) Check user_roles
   const { data: roleRow, error } = await supabase
     .from('user_roles')
     .select('role')
     .eq('user_id', currentUser.id)
     .single();
 
-  if(error || !roleRow || roleRow.role!=='admin'){
-    // ensure no silent session kept
-    await supabase.auth.signOut().catch(()=>{});
-    authMsg.textContent = 'Your account is not authorized as admin.';
-    currentUser=null; isAdmin=false; showAdmin(false);
+  if (error || !roleRow || roleRow.role !== 'admin') {
+    await supabase.auth.signOut();
+    currentUser = null; isAdmin = false;
+    if (authMsg) authMsg.textContent = 'Your account is not authorized as admin.';
+    showAdmin(false);
     return false;
   }
 
-  isAdmin = true; showAdmin(true);
+  isAdmin = true;
+  showAdmin(true);
   return true;
 }
 
-// ---------- Login / Logout ----------
-document.getElementById('loginBtn').onclick = async ()=>{
-  const email = document.getElementById('email').value.trim();
-  const password = document.getElementById('password').value;
-  authMsg.textContent = 'Signing in...';
+/* ----------------------------- Login UI ---------------------------- */
+loginBtn?.addEventListener('click', async () => {
+  loginBtn.disabled = true;
+  authMsg.textContent = '';
+  const email = emailEl.value.trim();
+  const password = passEl.value;
 
   const { error } = await supabase.auth.signInWithPassword({ email, password });
-  if(error){ authMsg.textContent = error.message; return; }
+  if (error) { authMsg.textContent = error.message; loginBtn.disabled = false; return; }
 
   const ok = await requireAdminSession();
-  if(ok){ initAdmin(); authMsg.textContent = ''; }
-};
+  loginBtn.disabled = false;
+  if (ok) initAdmin();
+});
 
-document.getElementById('logoutBtn').onclick = async ()=>{
+logoutBtn?.addEventListener('click', async () => {
   await supabase.auth.signOut();
-  currentUser=null; isAdmin=false;
+  currentUser = null; isAdmin = false;
   showAdmin(false);
-};
+});
 
-// Also handle refreshes / existing sessions
-requireAdminSession().then(ok => { if(ok) initAdmin(); }).catch(err=>console.error(err));
+/* --------------------------- Admin bootstrap ------------------------ */
+await requireAdminSession().then(ok => { if (ok) initAdmin(); });
 
-// ---------- Admin App ----------
-async function initAdmin(){
-  await Promise.all([loadCategories(), loadProducts(), loadOnhand(), loadOrders(), loadStats()]);
-  document.getElementById('prodForm').onsubmit = guarded(saveProduct);
-  document.getElementById('invForm').onsubmit  = guarded(addOnhand);
-  document.getElementById('csvBtn').onclick   = guarded(exportCSV);
+async function initAdmin() {
+  // Prime dropdowns (profile & duration) if present
+  if (invProfile && !invProfile.options.length) {
+    PROFILE_TYPES.forEach(t => {
+      const o = document.createElement('option'); o.value = t; o.textContent = t; invProfile.appendChild(o);
+    });
+  }
+  if (invDuration && !invDuration.options.length) {
+    DURATION_CHOICES.forEach(([label, days]) => {
+      const o = document.createElement('option'); o.value = String(days); o.textContent = label; invDuration.appendChild(o);
+    });
+  }
+
+  // Load data
+  await Promise.all([loadCategoriesSelect(), loadProductsDropDown(), loadProductsList(), loadOnhand(), loadOrders(), loadStats()]);
+
+  // Wire forms
+  prodForm?.addEventListener('submit', guarded(saveProduct));
+  invForm?.addEventListener('submit', guarded(addOnhand));
+  csvBtn?.addEventListener('click', guarded(exportCSV));
 }
 
-// Guard to prevent actions when not admin
-function guarded(fn){
-  return async function(e){
-    if(e) e.preventDefault();
+/* Guard to ensure admin session still valid */
+function guarded(fn) {
+  return async (e) => {
+    e?.preventDefault();
     const ok = await requireAdminSession();
-    if(!ok){ alert('Please login as admin.'); return; }
-    return fn(e);
+    if (!ok) { alert('Please login as admin.'); return; }
+    await fn(e);
   };
 }
 
-/* ===== Categories & Products ===== */
-async function loadCategories(){
-  // categories used for product creation (kept for compatibility)
-  const { data: cats, error } = await supabase.from('categories').select('id,name').order('sort');
-  const sel = document.getElementById('pCat');
-  if(!sel) return;
-  sel.innerHTML = '';
-  if (error){ console.error('loadCategories error', error); return; }
-  cats.forEach(c => sel.innerHTML += `<option value="${c.id}">${c.name}</option>`);
+/* ---------------------------- Categories --------------------------- */
+async function loadCategoriesSelect() {
+  // try to derive from products; else fallback to defaults
+  const { data, error } = await supabase.from('products').select('category').not('category','is',null).order('category');
+  const cats = new Set(DEFAULT_CATEGORIES);
+  if (!error && data) data.forEach(r => r?.category && cats.add(r.category));
+
+  if (pCat) {
+    pCat.innerHTML = '';
+    [...cats].forEach(c => {
+      const o = document.createElement('option');
+      o.value = c; o.textContent = c;
+      pCat.appendChild(o);
+    });
+  }
 }
 
-async function loadProducts(){
-  // load all products in admin product list
-  const box = document.getElementById('prodList');
-  const { data, error } = await supabase.from('products')
-    .select('*, categories(name)')
-    .order('created_at',{ascending:false});
-  if(error){ console.error('loadProducts error',error); if(box) box.textContent = error.message; return; }
-  if(!box) return;
-  box.innerHTML = '';
-  data.forEach(p=>{
+/* ----------------------------- Products ---------------------------- */
+async function loadProductsDropDown() {
+  // Populate the On-hand Accounts product <select> with optgroups by category
+  if (!invProd) return;
+
+  const { data, error } = await supabase
+    .from('products')
+    .select('id, name, category, available')
+    .order('category', { ascending: true })
+    .order('name', { ascending: true });
+
+  invProd.innerHTML = '';
+
+  if (error || !data?.length) {
+    const o = document.createElement('option');
+    o.value = ''; o.textContent = 'No products yet';
+    invProd.appendChild(o);
+    return;
+  }
+
+  // group by category
+  const byCat = data.reduce((m, r) => {
+    const key = r.category || 'Uncategorized';
+    if (!m[key]) m[key] = [];
+    m[key].push(r);
+    return m;
+  }, {});
+
+  Object.entries(byCat).forEach(([cat, rows]) => {
+    const group = document.createElement('optgroup');
+    group.label = cat;
+    rows.forEach(r => {
+      const o = document.createElement('option');
+      o.value = r.id;
+      o.textContent = r.name + (r.available ? '' : ' (hidden)');
+      group.appendChild(o);
+    });
+    invProd.appendChild(group);
+  });
+}
+
+async function loadProductsList() {
+  if (!prodList) return;
+
+  const { data, error } = await supabase
+    .from('products')
+    .select('id, name, price, description, category, available, available_stock, created_at')
+    .order('created_at', { ascending: false });
+
+  if (error) { prodList.textContent = error.message; return; }
+
+  prodList.innerHTML = '';
+  data?.forEach(p => {
     const div = document.createElement('div');
-    div.className='item';
+    div.className = 'item';
     div.innerHTML = `
-      <b>${p.name}</b> — ₱${Number(p.price).toFixed(2)} — <i>${p.categories?.name||''}</i>
-      <div class="muted">${p.description||''}</div>
-      <div class="muted">Stock: ${p.available_stock ?? 0} • ${p.available ? 'Available' : 'Hidden'}</div>
+      <b>${p.name}</b> — ${niceMoney(p.price)} • <i>${p.category ?? ''}</i>
+      <div class="muted">${p.description ?? ''}</div>
+      <div class="muted">Stock: ${p.available_stock ?? 0} • ${p.available ? 'Available' : 'Hidden'} • Added ${toDateStr(p.created_at)}</div>
       <div class="actions">
-        <button class="btn small" data-act="edit" data-id="${p.id}">Edit</button>
-        <button class="btn small" data-act="toggle" data-id="${p.id}">${p.available ? 'Hide' : 'Show'}</button>
+        <button class="btn small edit" data-id="${p.id}">Edit</button>
+        <button class="btn small toggle" data-id="${p.id}">${p.available ? 'Hide' : 'Show'}</button>
       </div>
     `;
-    div.querySelector('[data-act="edit"]').onclick   = guarded(()=> fillProduct(p));
-    div.querySelector('[data-act="toggle"]').onclick = guarded(async ()=>{
+    div.querySelector('.edit').onclick = guarded(() => fillProductForm(p));
+    div.querySelector('.toggle').onclick = guarded(async () => {
       await supabase.from('products').update({ available: !p.available }).eq('id', p.id);
-      await loadProducts();
-      await populateProductSelects();
+      loadProductsList(); loadProductsDropDown();
     });
-    box.appendChild(div);
+    prodList.appendChild(div);
   });
-
-  // also populate dropdowns used elsewhere
-  await populateProductSelects();
 }
 
-function fillProduct(p){
-  document.getElementById('pCat').value   = p.category_id || '';
-  document.getElementById('pName').value  = p.name || '';
-  document.getElementById('pPrice').value = p.price || '';
-  document.getElementById('pDesc').value  = p.description || '';
-  document.getElementById('pAvail').checked = !!p.available;
-  document.getElementById('pStock').value = p.available_stock || 0;
-  document.getElementById('prodForm').dataset.editId = p.id;
+function fillProductForm(p) {
+  if (pCat)   pCat.value   = p.category ?? '';
+  if (pName)  pName.value  = p.name ?? '';
+  if (pPrice) pPrice.value = p.price ?? '';
+  if (pDesc)  pDesc.value  = p.description ?? '';
+  if (pAvail) pAvail.checked = !!p.available;
+  if (pStock) pStock.value = p.available_stock ?? 0;
+  prodForm.dataset.editId = p.id;
 }
 
-async function saveProduct(e){
-  const form = e.target;
+async function saveProduct() {
+  // Build body tolerant to missing fields
   const body = {
-    category_id: document.getElementById('pCat').value || null,
-    name:        document.getElementById('pName').value,
-    price:       parseFloat(document.getElementById('pPrice').value || 0),
-    description: document.getElementById('pDesc').value || null,
-    available:   document.getElementById('pAvail').checked,
-    available_stock: parseInt(document.getElementById('pStock').value || 0)
+    category: pCat?.value || null,
+    name: (pName?.value || '').trim(),
+    price: Number(pPrice?.value || 0),
+    description: pDesc?.value?.trim() || null,
+    available: !!(pAvail?.checked),
+    available_stock: Number(pStock?.value || 0)
   };
-  const id = form.dataset.editId;
-  if (id) await supabase.from('products').update(body).eq('id', id);
-  else    await supabase.from('products').insert(body);
-  form.reset(); delete form.dataset.editId;
-  await loadProducts(); await loadCategories();
+  if (!body.name) { alert('Product name is required.'); return; }
+
+  const editId = prodForm?.dataset?.editId;
+  if (editId)  await supabase.from('products').update(body).eq('id', editId);
+  else         await supabase.from('products').insert(body);
+
+  if (prodForm) { prodForm.reset(); delete prodForm.dataset.editId; }
+  await Promise.all([loadProductsList(), loadProductsDropDown(), loadCategoriesSelect()]);
 }
 
-/* populate dropdowns used in admin forms with available product options */
-async function populateProductSelects(){
-  // For product selection in inventory and for on-hand add
-  const selInv = document.getElementById('invProd');   // on-hand add select
-  const selProdForm = document.getElementById('pCat'); // keep categories as before if needed
+/* --------------------------- On-hand Accounts ----------------------- */
+async function addOnhand() {
+  const product_id = invProd?.value || '';
+  const username   = (invUser?.value || '').trim();
+  const secret     = (invSecret?.value || '').trim();
+  const notes      = (invNotes?.value || '').trim() || null;
+  const profile    = invProfile?.value || null;
+  const durDays    = Number(invDuration?.value || 30);
 
-  const { data: products, error } = await supabase
-    .from('products')
-    .select('id,name,available,available_stock,price')
-    .order('name');
-
-  if(error){ console.error('populateProductSelects', error); return; }
-
-  if(selInv){
-    // build with product id, name and stock in option label
-    selInv.innerHTML = `<option value="">Select product...</option>`;
-    products.forEach(p=>{
-      const label = `${p.name} — ₱${Number(p.price||0).toFixed(2)} — ${p.available_stock ?? 0} on-hand`;
-      const opt = document.createElement('option');
-      opt.value = p.id;
-      opt.textContent = label;
-      // attach metadata via dataset
-      opt.dataset.stock = p.available_stock ?? 0;
-      opt.dataset.price = p.price ?? 0;
-      selInv.appendChild(opt);
-    });
-  }
-
-  // If you have other selects that need products, populate them similarly
-  const prodSelects = document.querySelectorAll('[data-populate-products]');
-  prodSelects.forEach(s=>{
-    s.innerHTML = `<option value="">Select product...</option>`;
-    products.forEach(p=>{
-      const o = document.createElement('option');
-      o.value = p.id;
-      o.textContent = `${p.name} — ${p.available_stock ?? 0} on-hand`;
-      s.appendChild(o);
-    });
-  });
-}
-
-/* ===== On-hand accounts ===== */
-async function addOnhand(e){
-  e.preventDefault();
-  // require fields: product, username, secret, account_type, duration
-  const prodId  = document.getElementById('invProd').value;
-  const username= document.getElementById('invUser').value.trim();
-  const secret  = document.getElementById('invSecret').value.trim();
-  const notes   = document.getElementById('invNotes').value.trim();
-  const accType = document.querySelector('input[name="accType"]:checked')?.value || 'solo'; // radio
-  const duration = document.getElementById('invDuration')?.value || '1 month';
-
-  if(!prodId || !username || !secret){
-    return alert('Please select product and fill username & password/token.');
-  }
-
-  // compute expires_at based on duration string (simple parser)
-  const now = new Date();
-  let expiresAt = null;
-  if(duration === 'lifetime') expiresAt = null;
-  else {
-    // parse '1 month', '3 months', '6 months'
-    const parts = duration.split(' ');
-    const num = parseInt(parts[0]) || 1;
-    const unit = parts[1] || 'month';
-    const dt = new Date(now);
-    if(unit.startsWith('month')) dt.setMonth(dt.getMonth() + num);
-    else if(unit.startsWith('day')) dt.setDate(dt.getDate() + num);
-    else if(unit.startsWith('year')) dt.setFullYear(dt.getFullYear() + num);
-    expiresAt = dt.toISOString();
-  }
-
-  // generate a simple order id for trace (can be improved)
-  const orderId = 'ORD-' + Math.random().toString(36).slice(2,10).toUpperCase();
+  if (!product_id) { alert('Please select a product.'); return; }
+  if (!username || !secret) { alert('Please enter username & password/token.'); return; }
 
   const payload = {
-    product_id: prodId,
-    username,
-    secret,
-    notes: notes || null,
-    account_type: accType,
-    expires_at: expiresAt,
-    order_id: orderId,
-    assigned: false
+    product_id, username, secret, notes,
+    profile_type: profile,               // if column exists
+    duration_days: isFinite(durDays) ? durDays : null, // if column exists
+    expires_at: isFinite(durDays) ? daysFromNow(durDays) : null // if column exists
   };
 
-  const { error } = await supabase.from('onhand_accounts').insert(payload);
-  if(error){ alert('Could not add account: ' + error.message); console.error(error); return; }
+  // Insert onhand account (tolerant insert even if some columns don't exist)
+  await supabase.from('onhand_accounts').insert(payload).select('id');
 
-  // increment product available_stock via RPC if exists (or simple update fallback)
-  try {
-    await supabase.rpc('increment_stock', { p_product_id: prodId });
-  } catch(e){ 
-    // fallback: increment directly (make sure you have permission)
-    await supabase.from('products').update({ available_stock: supabase.raw('available_stock + 1') }).eq('id', prodId).catch(()=>{});
-  }
+  // Increment product stock (do on the product record)
+  await supabase.rpc('increment_stock', { p_product_id: product_id }).catch(async () => {
+    // If RPC not present, fallback: update directly
+    await supabase.from('products')
+      .update({ available_stock: supabase.rpc ? undefined : supabase.sql`available_stock + 1` })
+      .eq('id', product_id);
+    // If above direct SQL not allowed, do it in two steps:
+    const { data: prod } = await supabase.from('products').select('available_stock').eq('id', product_id).single();
+    if (prod) await supabase.from('products').update({ available_stock: (prod.available_stock ?? 0) + 1 }).eq('id', product_id);
+  });
 
-  e.target.reset();
-  await loadOnhand();
-  await loadProducts(); // refresh product stock view
+  invForm?.reset();
+  await Promise.all([loadOnhand(), loadProductsList()]);
 }
 
-/* ===== Load on-hand accounts list ===== */
-async function loadOnhand(){
-  const box = document.getElementById('invList');
-  const { data, error } = await supabase.from('onhand_accounts')
-    .select('*, products(name,price)')
-    .order('assigned, created_at', {ascending:true});
-  if(error){ console.error('loadOnhand', error); if(box) box.textContent = error.message; return; }
-  if(!box) return;
-  box.innerHTML='';
-  data.forEach(a=>{
+async function loadOnhand() {
+  if (!invList) return;
+  const { data, error } = await supabase
+    .from('onhand_accounts')
+    .select('id, username, assigned, assigned_at, created_at, notes, profile_type, duration_days, expires_at, products(name)')
+    .order('assigned', { ascending: true })
+    .order('created_at', { ascending: false });
+
+  if (error) { invList.textContent = error.message; return; }
+
+  invList.innerHTML = '';
+  data?.forEach(a => {
     const div = document.createElement('div');
-    div.className='item';
-    const status = a.assigned ? 'Assigned' : 'Available';
-    const expires = a.expires_at ? new Date(a.expires_at).toLocaleString() : '—';
+    div.className = 'item';
     div.innerHTML = `
       <b>${a.products?.name || ''}</b> • ${a.username}
-      <div class="muted">${status} ${a.assigned_at ? '• ' + new Date(a.assigned_at).toLocaleString():''}</div>
-      <div class="muted">Type: ${a.account_type || 'solo'} • Expires: ${expires}</div>
-      <div class="muted">${a.notes || ''}</div>
-      <div class="actions">
-        <button class="btn small delete" data-id="${a.id}">Delete</button>
+      <div class="muted">
+        ${a.assigned ? 'Assigned' : 'Available'}
+        ${a.assigned_at ? ' • ' + toDateStr(a.assigned_at) : ''}
+        ${a.profile_type ? ' • ' + a.profile_type : ''}
+        ${a.duration_days ? ' • ' + a.duration_days + 'd' : ''}
+        ${a.expires_at ? ' • Expires: ' + toDateStr(a.expires_at) : ''}
       </div>
+      ${a.notes ? `<div class="muted">${a.notes}</div>` : ''}
     `;
-    div.querySelector('.delete').onclick = guarded(async ()=>{
-      if(!confirm('Delete this on-hand account?')) return;
-      await supabase.from('onhand_accounts').delete().eq('id', a.id);
-      // optionally decrement stock (depends on your stock logic)
-      await loadOnhand(); await loadProducts();
-    });
-    box.appendChild(div);
+    invList.appendChild(div);
   });
 }
 
-/* ===== Orders ===== */
-async function loadOrders(){
-  const box = document.getElementById('orderList');
-  const { data, error } = await supabase.from('orders').select('*').order('created_at',{ascending:false});
-  if(error){ console.error('loadOrders', error); if(box) box.textContent = error.message; return; }
-  if(!box) return;
-  box.innerHTML='';
-  data.forEach(o=>{
+/* ------------------------------- Orders ---------------------------- */
+async function loadOrders() {
+  if (!orderList) return;
+  const { data, error } = await supabase
+    .from('orders')
+    .select('*')
+    .order('created_at', { ascending: false });
+
+  if (error) { orderList.textContent = error.message; return; }
+
+  orderList.innerHTML = '';
+  data?.forEach(o => {
     const div = document.createElement('div');
-    div.className='item';
+    div.className = 'item';
     div.innerHTML = `
-      <b>${o.product_name}</b> — ₱${Number(o.price).toFixed(2)} • <i>${o.payment_method||'N/A'}</i>
-      <div class="muted">Order ${o.id} • ${o.customer_name} • ${o.customer_email}</div>
-      ${o.payment_ref?`<div class="muted">Ref: ${o.payment_ref}</div>`:''}
-      ${o.receipt_url?`<div><a target="_blank" href="${o.receipt_url}">View receipt</a></div>`:''}
-      ${o.drop_payload ? `
-        <div class="card" style="margin:6px 0">
-          <b>Delivered:</b> ${o.drop_payload.username} / ${o.drop_payload.secret}
-          <br><small>${o.drop_payload.notes || ''}</small>
-        </div>` : ''}
+      <b>${o.product_name}</b> — ${niceMoney(o.price)} • <i>${o.payment_method}</i>
+      <div class="muted">Order ${o.id} • ${o.customer_name ?? ''} • ${o.customer_email ?? ''}</div>
+      ${o.payment_ref ? `<div class="muted">Ref: ${o.payment_ref}</div>` : ''}
+      ${o.receipt_url ? `<div><a target="_blank" href="${o.receipt_url}">View receipt</a></div>` : ''}
       <label>Status:
-        <select data-id="${o.id}" class="status">
-          ${['pending','paid','completed','cancelled'].map(s=>`<option ${s===o.status?'selected':''}>${s}</option>`).join('')}
+        <select class="status">
+          ${['pending','paid','completed','cancelled'].map(s => `<option ${s === o.status ? 'selected' : ''}>${s}</option>`).join('')}
         </select>
       </label>
       <div class="actions">
-        <button data-id="${o.id}" class="btn small save">Save</button>
-        <button data-id="${o.id}" class="btn small drop">Confirm Paid & Auto-Drop</button>
+        <button class="btn small save">Save</button>
+        <button class="btn small drop">Confirm Paid & Auto-Drop</button>
       </div>
     `;
-    div.querySelector('.save').onclick = guarded(async ()=>{
+    div.querySelector('.save').onclick = guarded(async () => {
       const st = div.querySelector('.status').value;
-      await supabase.from('orders').update({status:st}).eq('id', o.id);
+      await supabase.from('orders').update({ status: st }).eq('id', o.id);
       loadStats(); loadOrders();
     });
-    div.querySelector('.drop').onclick = guarded(async ()=>{
-      await supabase.from('orders').update({status:'paid'}).eq('id', o.id);
-      const { error } = await supabase.rpc('fulfill_order', { p_order_id: o.id });
-      if (error) alert(error.message);
-      await loadProducts(); await loadOnhand(); await loadOrders(); await loadStats();
+    div.querySelector('.drop').onclick = guarded(async () => {
+      await supabase.from('orders').update({ status: 'paid' }).eq('id', o.id);
+      // Try RPC if present
+      const { error: rpcErr } = await supabase.rpc('fulfill_order', { p_order_id: o.id });
+      if (rpcErr) {
+        // If RPC missing, you can handle manual fulfillment here if you want.
+        console.warn('fulfill_order RPC not present:', rpcErr.message);
+      }
+      await Promise.all([loadProductsList(), loadOnhand(), loadOrders(), loadStats()]);
     });
-    box.appendChild(div);
+    orderList.appendChild(div);
   });
 }
 
-async function loadStats(){
-  const { data } = await supabase.from('orders')
-    .select('product_name,status')
-    .in('status',['paid','completed']);
+/* ----------------------------- Stats / CSV ------------------------- */
+async function loadStats() {
+  if (!statsBox) return;
+  const { data, error } = await supabase
+    .from('orders')
+    .select('product_name, status')
+    .in('status', ['paid','completed']);
+
+  if (error) { statsBox.textContent = error.message; return; }
+
   const counts = {};
-  data?.forEach(o=>counts[o.product_name]=(counts[o.product_name]||0)+1);
-  const html = Object.entries(counts).map(([k,v])=>`<div class="card"><h4>${k}</h4><p class="muted">${v} sold</p></div>`).join('');
-  document.getElementById('stats').innerHTML = `<h3>Sales Summary</h3><div class="grid">${html || '<p class="muted">No sales yet.</p>'}</div>`;
+  data?.forEach(o => counts[o.product_name] = (counts[o.product_name] || 0) + 1);
+
+  const html = Object.entries(counts)
+    .map(([name, n]) => `<div class="card"><h4>${name}</h4><p class="muted">${n} sold</p></div>`)
+    .join('');
+
+  statsBox.innerHTML = `<h3>Sales Summary</h3><div class="grid">${html || '<p class="muted">No sales yet.</p>'}</div>`;
 }
 
-/* ===== Export CSV ===== */
-async function exportCSV(){
+async function exportCSV() {
   const { data, error } = await supabase.from('orders').select('*');
   if (error) return alert(error.message);
-  if (!data.length) return alert('No orders.');
-  const headers=Object.keys(data[0]); const rows=[headers.join(',')];
-  data.forEach(r=>rows.push(headers.map(h=>`"${(r[h]??'').toString().replace(/"/g,'""')}"`).join(',')));
-  const blob=new Blob([rows.join('\n')],{type:'text/csv'}), url=URL.createObjectURL(blob);
-  const a=document.createElement('a'); a.href=url; a.download='orders.csv'; a.click(); URL.revokeObjectURL(url);
+  if (!data?.length) return alert('No orders.');
+
+  const headers = Object.keys(data[0]);
+  const rows = [headers.join(',')];
+  data.forEach(r => rows.push(headers.map(h => `"${String(r[h] ?? '').replace(/"/g,'""')}"`).join(',')));
+
+  const blob = new Blob([rows.join('\n')], { type: 'text/csv' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a'); a.href = url; a.download = 'orders.csv';
+  document.body.appendChild(a); a.click(); a.remove();
+  URL.revokeObjectURL(url);
 }
